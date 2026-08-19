@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>fixture: minhas grus</title>
+    <style>
+      #modal-pesquisar-cliente {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- CENARIO -->
+
+    <button type="button" id="button_pesquisar">Buscar cliente</button>
+
+    <div id="modal-pesquisar-cliente">
+      <input
+        type="radio"
+        id="tipoPesquisaModalDocumento"
+        name="tipoPesquisaModal"
+        value="documento"
+      />
+      <label for="tipoPesquisaModalDocumento">Documento</label>
+      <input type="radio" id="tipoPesquisaModalNome" name="tipoPesquisaModal" value="nome" />
+      <label for="tipoPesquisaModalNome">Nome</label>
+      <input type="text" id="documento_modal" />
+      <button type="button" id="botao_pesquisa_modal">Pesquisar</button>
+      <table id="table-lista-clientes">
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <input type="radio" id="pesquisaDatas" name="tipoPesquisaGru" value="datas" />
+    <label for="pesquisaDatas">Por período</label>
+    <input type="radio" id="pesquisaGru" name="tipoPesquisaGru" value="gru" />
+    <label for="pesquisaGru">Por número da GRU</label>
+
+    <input type="text" id="dataInicioP" placeholder="dd/mm/aaaa" />
+    <input type="text" id="dataFimP" placeholder="dd/mm/aaaa" />
+    <button type="button" id="button_pesquisar_grus">Pesquisar</button>
+
+    <table class="table-striped">
+      <thead>
+        <tr>
+          <th>GRU</th>
+          <th>Serviço</th>
+          <th>Valor</th>
+          <th>Situação</th>
+          <th>2ª via</th>
+          <th>Recibo</th>
+          <th>Data Cadastro</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      var c = window.__CENARIO__ || {};
+
+      document.getElementById('button_pesquisar').onclick = function () {
+        document.getElementById('modal-pesquisar-cliente').style.display = 'block';
+      };
+
+      document.getElementById('botao_pesquisa_modal').onclick = function () {
+        var tbody = document.querySelector('#table-lista-clientes tbody');
+        tbody.innerHTML = '';
+        (c.resultadoBusca || []).forEach(function (nomeMascarado) {
+          var tr = document.createElement('tr');
+          var tdNome = document.createElement('td');
+          tdNome.textContent = nomeMascarado;
+          var tdAcao = document.createElement('td');
+          var botao = document.createElement('button');
+          botao.type = 'button';
+          botao.className = 'button-pesquisar-cliente';
+          botao.textContent = 'Selecionar';
+          tdAcao.appendChild(botao);
+          tr.appendChild(tdNome);
+          tr.appendChild(tdAcao);
+          tbody.appendChild(tr);
+        });
+      };
+
+      document.querySelector('#table-lista-clientes').addEventListener('click', function (e) {
+        if (e.target.classList.contains('button-pesquisar-cliente')) {
+          document.getElementById('modal-pesquisar-cliente').style.display = 'none';
+        }
+      });
+
+      document.getElementById('button_pesquisar_grus').onclick = function () {
+        window.__PERIODO_BUSCADO__ = {
+          inicio: document.getElementById('dataInicioP').value,
+          fim: document.getElementById('dataFimP').value,
+        };
+
+        var tbody = document.querySelector('table.table-striped tbody');
+        tbody.innerHTML = '';
+        (c.resultadoGrus || []).forEach(function (gru) {
+          var tr = document.createElement('tr');
+
+          [gru.nossoNumero, gru.servico, gru.valor, gru.situacao].forEach(function (texto) {
+            var td = document.createElement('td');
+            td.textContent = texto;
+            tr.appendChild(td);
+          });
+
+          var tdSegundaVia = document.createElement('td');
+          if (gru.temSegundaVia) {
+            var link = document.createElement('a');
+            link.className = 'linkgeravia';
+            link.setAttribute('href', '/pag/gru/imprimir/codigo/' + gru.nossoNumero);
+            link.textContent = '2ª via';
+            tdSegundaVia.appendChild(link);
+          }
+          tr.appendChild(tdSegundaVia);
+
+          var tdRecibo = document.createElement('td');
+          tr.appendChild(tdRecibo);
+
+          var tdData = document.createElement('td');
+          tdData.textContent = gru.dataCadastro;
+          tr.appendChild(tdData);
+
+          tbody.appendChild(tr);
+        });
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>fixture: gru/finalizada</title>
+  </head>
+  <body>
+    <!-- CENARIO -->
+    <h1>Guia gerada</h1>
+    <div id="nosso-numero"></div>
+    <a class="btn-download" href="#">Baixar boleto</a>
+    <button type="button">Novo Serviço</button>
+    <script>
+      var c = window.__CENARIO__ || {};
+      document.getElementById('nosso-numero').textContent = c.nossoNumero;
+      document.querySelector('a.btn-download').setAttribute('href', c.linkBoletoRelativo);
+      document.querySelector('button').addEventListener('click', function () {
+        window.location.href = c.rotaGerar;
+      });
+    </script>
+  </body>
+</html>

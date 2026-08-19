@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>fixture: login</title>
+  </head>
+  <body>
+    <!-- CENARIO -->
+    <form id="loginForm">
+      <input id="usuarioLogin" name="usuario" type="text" />
+      <input name="usuario.senha" type="password" />
+      <button type="submit">Entrar</button>
+    </form>
+    <script>
+      document.getElementById('loginForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var usuario = document.getElementById('usuarioLogin').value;
+        var senha = document.querySelector('input[name="usuario.senha"]').value;
+        var c = window.__CENARIO__ || {};
+        if (usuario === c.usuarioValido && senha === c.senhaValida) {
+          document.cookie = 'sessaoInpiTeste=1; path=/';
+          window.location.href = c.rotaGerar;
+        }
+        // credenciais erradas: fica na mesma tela, #loginForm continua presente
+      });
+    </script>
+  </body>
+</html>

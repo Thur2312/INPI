@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>fixture: gru/gerar</title>
+    <style>
+      #modal-pesquisar-cliente,
+      #conferencia-section {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- CENARIO -->
+
+    <div id="gerar-form">
+      <button type="button" id="button_pesquisar">Buscar cliente</button>
+
+      <div id="modal-pesquisar-cliente">
+        <input
+          type="radio"
+          id="tipoPesquisaModalDocumento"
+          name="tipoPesquisaModal"
+          value="documento"
+        />
+        <label for="tipoPesquisaModalDocumento">Documento</label>
+        <input type="radio" id="tipoPesquisaModalNome" name="tipoPesquisaModal" value="nome" />
+        <label for="tipoPesquisaModalNome">Nome</label>
+        <input type="text" id="documento_modal" />
+        <button type="button" id="botao_pesquisa_modal">Pesquisar</button>
+        <table id="table-lista-clientes">
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <select id="select-tipo-servico">
+        <option value="">Selecione</option>
+        <option value="300">Marcas</option>
+      </select>
+
+      <select id="select-servico">
+        <option value="">Selecione</option>
+        <option value="3020">3020 - Trâmite Prioritário</option>
+      </select>
+
+      <select id="select-dados-servico-objeto-peticao">
+        <option value="">Selecione</option>
+      </select>
+
+      <input type="text" id="input-servico-processo-administrativo" />
+
+      <button type="button" id="button_confirmar">Confirmar</button>
+    </div>
+
+    <div id="conferencia-section">
+      <table id="tabela-preview-dados-servicos"></table>
+      <span id="valor-total-guia"></span>
+      <button type="button" id="button-finalizar-servico">Gerar boleto</button>
+      <button type="button" id="button-pagar-online">Pagar Online</button>
+      <button type="button" id="button-cancelar-servico">Cancelar Serviço</button>
+    </div>
+
+    <script>
+      var c = window.__CENARIO__ || {};
+
+      document.getElementById('button_pesquisar').onclick = function () {
+        document.getElementById('modal-pesquisar-cliente').style.display = 'block';
+      };
+
+      document.getElementById('botao_pesquisa_modal').onclick = function () {
+        var tbody = document.querySelector('#table-lista-clientes tbody');
+        tbody.innerHTML = '';
+        (c.resultadoBusca || []).forEach(function (nomeMascarado) {
+          var tr = document.createElement('tr');
+          var tdNome = document.createElement('td');
+          tdNome.textContent = nomeMascarado;
+          var tdAcao = document.createElement('td');
+          var botao = document.createElement('button');
+          botao.type = 'button';
+          botao.className = 'button-pesquisar-cliente';
+          botao.textContent = 'Selecionar';
+          tdAcao.appendChild(botao);
+          tr.appendChild(tdNome);
+          tr.appendChild(tdAcao);
+          tbody.appendChild(tr);
+        });
+      };
+
+      document.querySelector('#table-lista-clientes').addEventListener('click', function (e) {
+        if (e.target.classList.contains('button-pesquisar-cliente')) {
+          window.__CLIENTE_SELECIONADO__ = true;
+          document.getElementById('modal-pesquisar-cliente').style.display = 'none';
+        }
+      });
+
+      var selectObjeto = document.getElementById('select-dados-servico-objeto-peticao');
+      (c.opcoesObjeto || []).forEach(function (texto, indice) {
+        var opt = document.createElement('option');
+        opt.value = String(indice + 1);
+        opt.textContent = texto;
+        selectObjeto.appendChild(opt);
+      });
+
+      document.getElementById('button_confirmar').onclick = function () {
+        document.getElementById('gerar-form').style.display = 'none';
+        document.getElementById('conferencia-section').style.display = 'block';
+        document.getElementById('valor-total-guia').textContent = c.valorGru;
+      };
+
+      document.getElementById('button-cancelar-servico').onclick = function () {
+        window.__CANCELADO__ = true;
+        document.getElementById('conferencia-section').style.display = 'none';
+        document.getElementById('gerar-form').style.display = 'block';
+      };
+
+      document.getElementById('button-finalizar-servico').onclick = function () {
+        window.location.href = c.rotaFinalizada;
+      };
+    </script>
+  </body>
+</html>
