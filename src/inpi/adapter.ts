@@ -46,10 +46,13 @@ export type ResultadoEmissaoGru =
       codigoGru: string;
       valorGru: string;
       linkBoleto: string;
+      /** `value` real do `<option>` de objeto da petição casado pelo regex — ver `preencherServico`. */
+      objetoPeticaoValue: string;
     }
   | {
       modo: 'dry-run';
       valorConferido: string;
+      objetoPeticaoValue: string;
     };
 
 export interface GruEncontrada {
@@ -227,7 +230,7 @@ export class AdapterInpi {
     }
 
     await this.selecionarCliente(dados.titularDocumento);
-    await this.preencherServico(dados);
+    const objetoPeticaoValue = await this.preencherServico(dados);
     await this.page.click(SERVICO.confirmar);
     // Mesmo raciocínio de `selecionarCliente`: a tela de conferência é
     // montada de forma assíncrona (mesma URL, sem navegação) — espera a
@@ -240,7 +243,7 @@ export class AdapterInpi {
 
     if (opcoes.dryRun) {
       await this.page.click(CONFERENCIA.cancelar);
-      return { modo: 'dry-run', valorConferido };
+      return { modo: 'dry-run', valorConferido, objetoPeticaoValue };
     }
 
     await opcoes.antesDeConfirmar?.();
@@ -251,7 +254,7 @@ export class AdapterInpi {
     await this.verificarCaptcha();
     await this.page.waitForSelector(FINALIZADA.nossoNumero);
 
-    return this.lerResultadoFinalizada(valorConferido);
+    return this.lerResultadoFinalizada(valorConferido, objetoPeticaoValue);
   }
 
   /** Reseta a tela de geração para o próximo serviço, sem refazer login. */
@@ -323,7 +326,13 @@ export class AdapterInpi {
     await linhas.first().locator(CLIENTE.selecionar).click();
   }
 
-  private async preencherServico(dados: DadosEmissaoGru): Promise<void> {
+  /**
+   * Retorna o `value` real do `<option>` casado pelo regex — não é o texto
+   * visível, é o atributo que o form efetivamente envia. Documentar esse
+   * valor no log (ver `workerLoop`/`dryRun`) é o que permite depurar rápido
+   * no dia da operação se o INPI trocar o value sem avisar.
+   */
+  private async preencherServico(dados: DadosEmissaoGru): Promise<string> {
     await this.page.selectOption(SERVICO.tipo, TIPO_SERVICO_MARCAS_VALUE);
     await this.page.selectOption(SERVICO.codigo, CODIGO_SERVICO_3020);
 
@@ -337,6 +346,7 @@ export class AdapterInpi {
 
     await this.page.selectOption(SERVICO.objeto, { label: opcaoEncontrada });
     await this.page.fill(SERVICO.processo, dados.numeroProcesso);
+    return this.page.locator(SERVICO.objeto).inputValue();
   }
 
   private async conferirValor(valorEsperado: number): Promise<string> {
@@ -351,7 +361,10 @@ export class AdapterInpi {
     return valorTexto;
   }
 
-  private async lerResultadoFinalizada(valorGru: string): Promise<ResultadoEmissaoGru> {
+  private async lerResultadoFinalizada(
+    valorGru: string,
+    objetoPeticaoValue: string,
+  ): Promise<ResultadoEmissaoGru> {
     const nossoNumero = (await this.page.locator(FINALIZADA.nossoNumero).innerText()).trim();
     const href = await this.page.locator(FINALIZADA.linkBoleto).getAttribute('href');
 
@@ -368,7 +381,7 @@ export class AdapterInpi {
     const linkBoleto = new URL(href, this.page.url()).toString();
     const codigoGru = linkBoleto.split('/').filter(Boolean).pop() ?? '';
 
-    return { modo: 'emitida', nossoNumero, codigoGru, valorGru, linkBoleto };
+    return { modo: 'emitida', nossoNumero, codigoGru, valorGru, linkBoleto, objetoPeticaoValue };
   }
 
   /**

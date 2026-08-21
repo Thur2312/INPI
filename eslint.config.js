@@ -38,7 +38,8 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', 'output/', 'data/'],
+    // JS de navegador servido estático pelo dashboard — fora do pipeline TS/Node de propósito.
+    ignores: ['dist/', 'node_modules/', 'output/', 'data/', 'src/dashboard/public/'],
   },
   prettier,
 );

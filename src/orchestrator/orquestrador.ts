@@ -4,6 +4,7 @@ import { LARGADA_WORKER_MAX_MS, LARGADA_WORKER_MIN_MS } from '../config/constant
 import { liberarOperacao, obterOperacao } from '../db/operacao.js';
 import { varrerOrfaos } from '../db/queue.js';
 import { AdapterInpi } from '../inpi/adapter.js';
+import { gerarRelatorios } from '../reports/relatorio.js';
 import type { Logger } from '../utils/logger.js';
 import { pausaAleatoria } from '../utils/sleep.js';
 import { iniciarBackupPeriodico } from './backup.js';
@@ -29,6 +30,8 @@ export interface OpcoesOperacao {
   pastaBackup: string;
   backupIntervaloMinutos: number;
   orfaoTimeoutMinutos: number;
+  /** Pasta onde o relatório final (CSV + XLSX) é salvo quando a operação encerra. */
+  pastaRelatorios: string;
   /** Ponto de injeção para teste — em produção é sempre `AdapterInpi.criar`. */
   criarAdapter?: (context: BrowserContext) => Promise<AdapterCompleto>;
   /** Override de teste para a largada escalonada (produção usa as constantes de 10–15s). */
@@ -72,6 +75,7 @@ export function rodarOperacao(opcoes: OpcoesOperacao): OperacaoEmAndamento {
     pastaBackup,
     backupIntervaloMinutos,
     orfaoTimeoutMinutos,
+    pastaRelatorios,
     criarAdapter = (context: BrowserContext) => AdapterInpi.criar(context),
     largadaMinMs = LARGADA_WORKER_MIN_MS,
     largadaMaxMs = LARGADA_WORKER_MAX_MS,
@@ -159,9 +163,19 @@ export function rodarOperacao(opcoes: OpcoesOperacao): OperacaoEmAndamento {
     }
 
     await Promise.all(tarefas);
-  })().finally(() => {
+  })().finally(async () => {
     pararBackup();
     clearInterval(intervalOrfaos);
+
+    try {
+      const resultado = await gerarRelatorios(db, pastaRelatorios);
+      logger.info('relatório final gerado', { ...resultado });
+    } catch (erro) {
+      logger.error('falha ao gerar relatório final', {
+        erro: erro instanceof Error ? erro.message : String(erro),
+      });
+    }
+
     logger.info('operação encerrada — todas as tarefas pararam');
   });
 

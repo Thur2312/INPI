@@ -99,6 +99,32 @@ export function listarProcessosPorStatus(db: Database.Database, status: string):
   return rows.map(paraDominio);
 }
 
+/** Usado pelo dashboard e pelo relatório final — visão completa da fila, em ordem de protocolo. */
+export function listarTodosProcessos(db: Database.Database): Processo[] {
+  const rows = db.prepare('SELECT * FROM processos ORDER BY posicao ASC').all() as LinhaProcessoRow[];
+  return rows.map(paraDominio);
+}
+
+/**
+ * Leitura pura, sem reivindicar nada — usada pelo modo ensaio (`--dry-run`).
+ * Mesmo critério de ordem do claim real (`reivindicarProximo`: PRINCIPAL
+ * antes de RESERVA, por posicao), mas nunca muda status/worker/tentativas:
+ * o ensaio precisa examinar "os N primeiros da fila" sem consumi-los.
+ */
+export function listarProximosDaFila(db: Database.Database, limite: number): Processo[] {
+  const rows = db
+    .prepare(
+      `
+      SELECT * FROM processos
+      WHERE status IN ('VALIDADO', 'AGUARDANDO_ABERTURA')
+      ORDER BY CASE fila WHEN 'PRINCIPAL' THEN 0 ELSE 1 END, posicao ASC
+      LIMIT @limite
+    `,
+    )
+    .all({ limite }) as LinhaProcessoRow[];
+  return rows.map(paraDominio);
+}
+
 /**
  * Move todo processo VALIDADO para AGUARDANDO_ABERTURA — o próximo passo do
  * fluxo é apenas esperar o verificador de cota liberar a operação, não uma

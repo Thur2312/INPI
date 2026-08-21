@@ -22,6 +22,7 @@ const envSchema = z.object({
   BACKUP_INTERVALO_MINUTOS: z.coerce.number().int().min(1).default(5),
 
   OUTPUT_DIR: z.string().default('./output'),
+  DASHBOARD_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
 
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });

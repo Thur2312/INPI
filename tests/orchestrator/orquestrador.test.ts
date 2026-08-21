@@ -111,6 +111,7 @@ function opcoesBase(overrides: Partial<OpcoesOperacao> = {}): OpcoesOperacao {
     pastaBackup: join(pastaTemp, 'backups'),
     backupIntervaloMinutos: 60,
     orfaoTimeoutMinutos: 15,
+    pastaRelatorios: join(pastaTemp, 'relatorios'),
     criarAdapter: () => Promise.resolve(criarAdapterFalso()),
     largadaMinMs: 1,
     largadaMaxMs: 2,

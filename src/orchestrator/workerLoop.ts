@@ -180,8 +180,10 @@ async function processarUmItem(deps: DependenciasWorker, processo: Processo): Pr
   );
 
   if (resultado.modo !== 'emitida') {
-    // Não deveria acontecer no worker de produção (dry-run é um modo à
-    // parte, ver Etapa 5) — devolve em vez de perder o processo.
+    // Não deveria acontecer aqui: este worker nunca chama emitirGru com
+    // dryRun:true (o modo ensaio tem seu próprio caminho, ver dryRun.ts,
+    // que nem passa por reivindicarProximo/devolverAFila). Devolve em vez
+    // de perder o processo, só por defesa.
     devolverAFila(db, processo.id, `emitirGru retornou modo "${resultado.modo}" inesperado`);
     return;
   }
@@ -211,6 +213,7 @@ async function processarUmItem(deps: DependenciasWorker, processo: Processo): Pr
     workerId,
     processoId: processo.id,
     nossoNumero: resultado.nossoNumero,
+    objetoPeticaoValue: resultado.objetoPeticaoValue,
   });
 
   await adapter.novoServico();

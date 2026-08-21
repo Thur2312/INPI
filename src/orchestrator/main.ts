@@ -5,19 +5,44 @@ import { carregarEnv } from '../config/env.js';
 import { abrirConexao } from '../db/connection.js';
 import { migrar } from '../db/migrate.js';
 import { obterObjetoPeticaoPrincipal } from '../db/processos.js';
+import { AdapterInpi } from '../inpi/adapter.js';
 import { criarLogger } from '../utils/logger.js';
+import { parseArgumentosCli } from './cli.js';
+import { executarDryRun } from './dryRun.js';
 import type { ConfigWorker } from './workerLoop.js';
 import { rodarOperacao } from './orquestrador.js';
 
 async function main(): Promise<void> {
+  const argumentos = parseArgumentosCli(process.argv.slice(2));
   const env = carregarEnv();
 
   const db = abrirConexao(env.DB_PATH);
   migrar(db);
 
-  const logger = criarLogger(join(env.OUTPUT_DIR, 'logs', `operacao-${Date.now()}.jsonl`), [
-    env.INPI_SENHA,
-  ]);
+  const logger = criarLogger(
+    join(env.OUTPUT_DIR, 'logs', `${argumentos.dryRun ? 'ensaio' : 'operacao'}-${Date.now()}.jsonl`),
+    [env.INPI_SENHA],
+  );
+
+  if (argumentos.dryRun) {
+    const browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext();
+    const adapter = await AdapterInpi.criar(context);
+
+    await executarDryRun({
+      db,
+      adapter,
+      credenciais: { usuario: env.INPI_USUARIO, senha: env.INPI_SENHA },
+      valorEsperadoGru: env.VALOR_ESPERADO_GRU,
+      limite: argumentos.limite,
+      logger,
+    });
+
+    await context.close();
+    await browser.close();
+    db.close();
+    return;
+  }
 
   const objetoInfo = obterObjetoPeticaoPrincipal(db);
   if (!objetoInfo) {
@@ -54,6 +79,7 @@ async function main(): Promise<void> {
     pastaBackup: join(dirname(env.DB_PATH), 'backups'),
     backupIntervaloMinutos: env.BACKUP_INTERVALO_MINUTOS,
     orfaoTimeoutMinutos: env.ORFAO_TIMEOUT_MINUTOS,
+    pastaRelatorios: join(env.OUTPUT_DIR, 'relatorios'),
   });
 
   let encerrando = false;

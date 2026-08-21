@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GRU 3020 — Painel da operação</title>
+    <link rel="stylesheet" href="/estilo.css" />
+  </head>
+  <body>
+    <header class="topo">
+      <div class="topo-titulo">
+        <h1>GRU 3020</h1>
+        <span class="subtitulo">trâmite prioritário de marcas</span>
+      </div>
+      <div class="status-operacao">
+        <span id="status-badge" class="badge badge--neutro">carregando…</span>
+        <span id="status-motivo" class="status-motivo"></span>
+        <button id="btn-retomar" class="botao botao--acao oculto" type="button">
+          Retomar operação
+        </button>
+      </div>
+    </header>
+
+    <section class="metricas" id="metricas" aria-label="Contagem por status"></section>
+
+    <section class="barra-acoes">
+      <input
+        id="filtro-texto"
+        class="campo-texto"
+        type="search"
+        placeholder="Buscar por titular, processo, cliente…"
+      />
+      <select id="filtro-status" class="campo-select">
+        <option value="">Todos os status</option>
+      </select>
+      <div class="espaco"></div>
+      <a class="botao" href="/api/relatorio.csv">Baixar CSV</a>
+      <a class="botao" href="/api/relatorio.xlsx">Baixar XLSX</a>
+    </section>
+
+    <section class="tabela-wrap">
+      <table class="tabela-fila">
+        <thead>
+          <tr>
+            <th>Pos.</th>
+            <th>Fila</th>
+            <th>Cliente</th>
+            <th>Titular</th>
+            <th>Processo</th>
+            <th>Status</th>
+            <th>Tent.</th>
+            <th>Nosso número</th>
+            <th>Valor</th>
+            <th>Erro</th>
+          </tr>
+        </thead>
+        <tbody id="corpo-tabela">
+          <tr>
+            <td colspan="10" class="linha-vazia">carregando…</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer class="rodape">
+      <span id="ultima-atualizacao"></span>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

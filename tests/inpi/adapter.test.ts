@@ -164,6 +164,8 @@ describe('emitirGru — caminho feliz', () => {
     expect(resultado.codigoGru).toBe('ABC123XYZ');
     expect(resultado.linkBoleto).toBe(`${BASE}/gru/imprimir/codigo/ABC123XYZ`);
     expect(resultado.valorGru).toBe('445,00');
+    // 'TPH' é a 1ª opção do dropdown no cenário padrão — value é o índice (1-based) que o fixture atribui.
+    expect(resultado.objetoPeticaoValue).toBe('1');
   });
 });
 
@@ -227,9 +229,23 @@ describe('emitirGru — modo ensaio (--dry-run)', () => {
 
     const resultado = await adapter.emitirGru(dadosEmissaoPadrao, { dryRun: true });
 
-    expect(resultado).toEqual({ modo: 'dry-run', valorConferido: '445,00' });
+    expect(resultado).toEqual({ modo: 'dry-run', valorConferido: '445,00', objetoPeticaoValue: '1' });
     const [page] = context.pages();
     expect(page?.url()).toBe(ROTAS.gerar); // nunca navegou para a tela finalizada
+  });
+
+  it('permite encadear vários itens em sequência sem novoServico() — cancelar já devolve a tela de busca', async () => {
+    const { adapter, cenario } = await criarAdapter();
+    await adapter.login(cenario.usuarioValido, cenario.senhaValida);
+
+    const primeiro = await adapter.emitirGru(dadosEmissaoPadrao, { dryRun: true });
+    const segundo = await adapter.emitirGru(
+      { ...dadosEmissaoPadrao, numeroProcesso: '940328200' },
+      { dryRun: true },
+    );
+
+    expect(primeiro.modo).toBe('dry-run');
+    expect(segundo.modo).toBe('dry-run');
   });
 });
 
