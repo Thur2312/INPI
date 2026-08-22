@@ -1,31 +1,98 @@
 import 'dotenv/config';
 import { z } from 'zod';
+import {
+  ESPERA_FILA_VAZIA_MS,
+  LARGADA_WORKER_MAX_MS,
+  LARGADA_WORKER_MIN_MS,
+  PAUSA_ENTRE_ACOES_MAX_MS,
+  PAUSA_ENTRE_ACOES_MIN_MS,
+  VERIFICADOR_INTERVALO_MAX_MS,
+  VERIFICADOR_INTERVALO_MIN_MS,
+} from './constants.js';
 
 const horaSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'formato esperado HH:MM');
 
-const envSchema = z.object({
-  INPI_USUARIO: z.string().min(1, 'INPI_USUARIO é obrigatório'),
-  INPI_SENHA: z.string().min(1, 'INPI_SENHA é obrigatório'),
+/**
+ * `MAX_WORKERS` some acima de 4 (o valor com que o sistema foi operado e
+ * testado — largada escalonada + ritmo humano no INPI). Nada aqui impede
+ * escalar mais: o teto de 20 é só um limite de sanidade contra erro de
+ * digitação no `.env` (ex.: "40" virar 400 zeros). Subir isso é uma
+ * decisão do operador no dia, não uma trava de segurança do sistema — o
+ * teto de negócio real (10 requerimentos por titular) é outro, fixo em
+ * `MAX_TRAMITE_PRIORITARIO_POR_TITULAR`, e não passa por aqui. Quanto mais
+ * workers e quanto mais agressivo `PAUSA_ENTRE_ACOES_*`/`LARGADA_WORKER_*`
+ * ficarem, maior o risco de o tráfego ser identificado como automação
+ * pelo INPI — ver `docs/runbook-vps.md`.
+ */
+const envSchema = z
+  .object({
+    INPI_USUARIO: z.string().min(1, 'INPI_USUARIO é obrigatório'),
+    INPI_SENHA: z.string().min(1, 'INPI_SENHA é obrigatório'),
 
-  DB_PATH: z.string().default('./data/inpi.db'),
+    DB_PATH: z.string().default('./data/inpi.db'),
 
-  MAX_WORKERS: z.coerce.number().int().min(1).max(4).default(4),
-  VALOR_ESPERADO_GRU: z.coerce.number().positive().default(445.0),
-  HORA_ABERTURA_COTA: horaSchema.default('10:00'),
-  HORA_LIMITE_EMISSAO: horaSchema.default('22:00'),
-  HARD_STOP_22H: z
-    .string()
-    .default('false')
-    .transform((v) => v.toLowerCase() === 'true'),
-  MAX_TENTATIVAS: z.coerce.number().int().min(1).default(3),
-  ORFAO_TIMEOUT_MINUTOS: z.coerce.number().int().min(1).default(15),
-  BACKUP_INTERVALO_MINUTOS: z.coerce.number().int().min(1).default(5),
+    MAX_WORKERS: z.coerce.number().int().min(1).max(20).default(4),
+    VALOR_ESPERADO_GRU: z.coerce.number().positive().default(445.0),
+    HORA_ABERTURA_COTA: horaSchema.default('10:00'),
+    HORA_LIMITE_EMISSAO: horaSchema.default('22:00'),
+    HARD_STOP_22H: z
+      .string()
+      .default('false')
+      .transform((v) => v.toLowerCase() === 'true'),
+    MAX_TENTATIVAS: z.coerce.number().int().min(1).default(3),
+    ORFAO_TIMEOUT_MINUTOS: z.coerce.number().int().min(1).default(15),
+    BACKUP_INTERVALO_MINUTOS: z.coerce.number().int().min(1).default(5),
 
-  OUTPUT_DIR: z.string().default('./output'),
-  DASHBOARD_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+    // Ritmo entre ações de um mesmo worker. Padrão = comportamento já
+    // testado (2-4s). Reduzir aumenta throughput por worker, mas também a
+    // chance de parecer tráfego robótico.
+    PAUSA_ENTRE_ACOES_MIN_MS: z.coerce.number().int().min(0).default(PAUSA_ENTRE_ACOES_MIN_MS),
+    PAUSA_ENTRE_ACOES_MAX_MS: z.coerce.number().int().min(0).default(PAUSA_ENTRE_ACOES_MAX_MS),
+    // Intervalo entre a largada de um worker e o próximo. Padrão = 10-15s.
+    LARGADA_WORKER_MIN_MS: z.coerce.number().int().min(0).default(LARGADA_WORKER_MIN_MS),
+    LARGADA_WORKER_MAX_MS: z.coerce.number().int().min(0).default(LARGADA_WORKER_MAX_MS),
+    // Intervalo de polling do verificador único de abertura de cota.
+    // Menor = reage mais rápido no instante em que a cota abre, mas bate
+    // no INPI com mais frequência antes disso.
+    VERIFICADOR_INTERVALO_MIN_MS: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .default(VERIFICADOR_INTERVALO_MIN_MS),
+    VERIFICADOR_INTERVALO_MAX_MS: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .default(VERIFICADOR_INTERVALO_MAX_MS),
+    // Quanto um worker espera antes de checar a fila de novo quando ela
+    // está vazia/pausada — afeta a velocidade de reação quando a RESERVA
+    // libera ou a operação é retomada depois de uma pausa.
+    ESPERA_FILA_VAZIA_MS: z.coerce.number().int().min(0).default(ESPERA_FILA_VAZIA_MS),
 
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-});
+    OUTPUT_DIR: z.string().default('./output'),
+    DASHBOARD_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+    /**
+     * Senha do HTTP Basic Auth do painel. Opcional só para não quebrar
+     * ambiente de teste/dev — em produção, agora que o painel pode subir a
+     * automação e recebe planilha com CPF/CNPJ, configure sempre (ver aviso
+     * em `dashboard/main.ts` quando ausente).
+     */
+    DASHBOARD_SENHA: z.string().min(8, 'DASHBOARD_SENHA deve ter pelo menos 8 caracteres').optional(),
+
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  })
+  .refine((env) => env.PAUSA_ENTRE_ACOES_MIN_MS <= env.PAUSA_ENTRE_ACOES_MAX_MS, {
+    message: 'PAUSA_ENTRE_ACOES_MIN_MS não pode ser maior que PAUSA_ENTRE_ACOES_MAX_MS',
+    path: ['PAUSA_ENTRE_ACOES_MIN_MS'],
+  })
+  .refine((env) => env.LARGADA_WORKER_MIN_MS <= env.LARGADA_WORKER_MAX_MS, {
+    message: 'LARGADA_WORKER_MIN_MS não pode ser maior que LARGADA_WORKER_MAX_MS',
+    path: ['LARGADA_WORKER_MIN_MS'],
+  })
+  .refine((env) => env.VERIFICADOR_INTERVALO_MIN_MS <= env.VERIFICADOR_INTERVALO_MAX_MS, {
+    message: 'VERIFICADOR_INTERVALO_MIN_MS não pode ser maior que VERIFICADOR_INTERVALO_MAX_MS',
+    path: ['VERIFICADOR_INTERVALO_MIN_MS'],
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

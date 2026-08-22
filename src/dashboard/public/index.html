@@ -13,6 +13,7 @@
         <span class="subtitulo">trâmite prioritário de marcas</span>
       </div>
       <div class="status-operacao">
+        <span id="status-processo" class="badge badge--neutro">processo: parado</span>
         <span id="status-badge" class="badge badge--neutro">carregando…</span>
         <span id="status-motivo" class="status-motivo"></span>
         <button id="btn-retomar" class="botao botao--acao oculto" type="button">
@@ -20,6 +21,73 @@
         </button>
       </div>
     </header>
+
+    <section class="painel-controle">
+      <div class="cartao">
+        <h2>1. Importar planilha</h2>
+        <p class="ajuda">
+          Envie o CSV/XLSX com os requerimentos. Pode ser repetido — o sistema nunca duplica um
+          <code>numero_processo</code> já gravado.
+        </p>
+        <form id="form-importar" class="linha-form">
+          <input id="campo-planilha" type="file" accept=".csv,.xlsx" required />
+          <button id="btn-importar" class="botao botao--primario" type="submit">Importar</button>
+        </form>
+        <div id="resultado-importar" class="resultado-importar"></div>
+      </div>
+
+      <div class="cartao">
+        <h2>2. Iniciar operação</h2>
+        <p class="ajuda">
+          Sobe a automação (<code>npm run operar</code>) com os parâmetros abaixo. Comece com
+          valores moderados e escale se não houver sinal de bloqueio — ver runbook.
+        </p>
+        <form id="form-iniciar" class="grade-form">
+          <label>
+            Workers
+            <input id="campo-max-workers" type="number" min="1" max="20" step="1" />
+          </label>
+          <label>
+            Pausa entre ações — mín (ms)
+            <input id="campo-pausa-min" type="number" min="0" step="100" />
+          </label>
+          <label>
+            Pausa entre ações — máx (ms)
+            <input id="campo-pausa-max" type="number" min="0" step="100" />
+          </label>
+          <label>
+            Largada entre workers — mín (ms)
+            <input id="campo-largada-min" type="number" min="0" step="500" />
+          </label>
+          <label>
+            Largada entre workers — máx (ms)
+            <input id="campo-largada-max" type="number" min="0" step="500" />
+          </label>
+          <label>
+            Polling do verificador — mín (ms)
+            <input id="campo-verificador-min" type="number" min="0" step="1000" />
+          </label>
+          <label>
+            Polling do verificador — máx (ms)
+            <input id="campo-verificador-max" type="number" min="0" step="1000" />
+          </label>
+          <div class="acoes-iniciar">
+            <button id="btn-iniciar" class="botao botao--primario" type="submit">
+              Iniciar operação
+            </button>
+            <button id="btn-parar" class="botao botao--acao oculto" type="button">
+              Parar operação
+            </button>
+          </div>
+        </form>
+        <div id="resultado-iniciar" class="resultado-importar"></div>
+      </div>
+
+      <div class="cartao cartao--log">
+        <h2>Log da operação</h2>
+        <pre id="log-operacao" class="log-operacao">nada ainda…</pre>
+      </div>
+    </section>
 
     <section class="metricas" id="metricas" aria-label="Contagem por status"></section>
 

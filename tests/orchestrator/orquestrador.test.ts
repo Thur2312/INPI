@@ -158,6 +158,37 @@ describe('rodarOperacao — cota já aberta (RODANDO)', () => {
   }, 10_000);
 });
 
+describe('rodarOperacao — verificadorIntervaloMinMs/MaxMs', () => {
+  it('repassa o intervalo customizado ao verificador (sem isso o teste estouraria no default de 20-30s)', async () => {
+    inserirProcesso(1);
+
+    let chamadas = 0;
+    const adapterComPollingLento: AdapterCompleto = {
+      ...criarAdapterFalso(),
+      objetoPeticaoDisponivel: vi.fn().mockImplementation(() => {
+        chamadas += 1;
+        if (chamadas === 1) {
+          return Promise.resolve({ encontrado: false, value: null, opcoesAtuais: [] });
+        }
+        return Promise.resolve({ encontrado: true, value: '14', opcoesAtuais: ['TPH'] });
+      }),
+    };
+
+    const operacao = rodarOperacao(
+      opcoesBase({
+        maxWorkers: 1,
+        criarAdapter: () => Promise.resolve(adapterComPollingLento),
+        verificadorIntervaloMinMs: 1,
+        verificadorIntervaloMaxMs: 2,
+      }),
+    );
+    await operacao.concluida;
+
+    expect(chamadas).toBeGreaterThanOrEqual(2);
+    expect(contarPorStatus()).toEqual({ GRU_EMITIDA: 1 });
+  }, 10_000);
+});
+
 describe('rodarOperacao — parar()', () => {
   it('disponível imediatamente, antes de todos os workers terminarem de largar', async () => {
     liberarOperacao(db, '14');

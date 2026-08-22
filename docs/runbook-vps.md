@@ -91,6 +91,7 @@ Como usuário `inpi`, dentro de `/opt/inpi`:
 npm ci
 npx playwright install --with-deps chromium
 npm run migrate
+npm run importar -- caminho/para/lote.csv   # ou .xlsx — grava a planilha no banco antes de operar
 npm run operar
 ```
 
@@ -106,11 +107,14 @@ sqlite3 data/inpi.db "SELECT COUNT(*) FROM eventos WHERE resultado = 'ERRO_CAPTC
 
 Só começa depois do Passo 0 passar. Nada disto existe ainda — é o que falta construir.
 
-- [ ] **PM2** com `ecosystem.config.js` rodando dois processos: `npm run operar` e `npm run dashboard`, com restart automático em falha.
-- [ ] **Tailscale** instalado na VPS e no notebook da cliente — o painel escuta só na interface Tailscale, nunca na pública. Decisão já tomada no lugar de VPN genérica/Nginx/Basic Auth.
+- [ ] **PM2** com `ecosystem.config.js` rodando **só** `npm run dashboard` (não mais `npm run operar` — o painel agora sobe/derruba a operação sob demanda via `POST /api/iniciar`/`/api/parar`, não é mais um segundo processo sempre ligado), com restart automático em falha.
+- [ ] **`DASHBOARD_SENHA` configurada no `.env`** — o painel deixou de ser só leitura: agora recebe upload de planilha (CPF/CNPJ de cliente) e pode iniciar a automação de verdade. HTTP Basic Auth simples, complementar ao Tailscale, não substitui.
+- [ ] **Tailscale** instalado na VPS e no notebook da cliente — o painel escuta só na interface Tailscale, nunca na pública. Decisão já tomada no lugar de VPN genérica/Nginx/OAuth completo.
 - [ ] **Hardening de SSH**: desabilitar login root, autenticação só por chave (sem senha), `fail2ban`.
 - [ ] `DB_PATH` e `OUTPUT_DIR` apontando para disco persistente da VPS (já é o padrão do `.env`, só confirmar que o disco é persistente no plano contratado).
 - [ ] **Backup externo** (fora da VPS — S3, outro servidor) do arquivo SQLite e da pasta de output, com **teste de restore** — backup que nunca foi restaurado não é backup confirmado.
+
+Fluxo do dia da operação (tudo pelo painel, sem SSH): abrir `http://<tailscale-ip>:3000` → "1. Importar planilha" (upload do CSV/XLSX) → conferir o resumo (validados/pendências) → "2. Iniciar operação" (ajustar workers/ritmo se quiser, confirmar) → acompanhar pelas métricas e pelo log ao vivo → "Parar operação" se precisar interromper (graceful — cada worker termina o item atual antes de sair) → baixar relatório CSV/XLSX ao final.
 
 ## 5. Fase 2 — plano B, não o próximo passo
 

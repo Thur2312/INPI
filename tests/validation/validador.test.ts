@@ -66,6 +66,20 @@ describe('validarLinhas', () => {
     expect(pendenciaDados).toHaveLength(1);
   });
 
+  it('marca como PENDENCIA_DADOS quando numero_processo já existe no banco (2ª importação)', () => {
+    const resultado = validarLinhas(
+      [linha({ posicao: 1, numero_processo: '940328100' })],
+      new Set(['940328100']),
+    );
+    expect(resultado[0]?.status).toBe('PENDENCIA_DADOS');
+    expect(resultado[0]?.erroMensagem).toMatch(/já existe no banco/);
+  });
+
+  it('numerosProcessoExistentes vazio (padrão) não afeta linhas novas', () => {
+    const resultado = validarLinhas([linha({ posicao: 1, numero_processo: '940328100' })]);
+    expect(resultado[0]?.status).toBe('VALIDADO');
+  });
+
   it('resultado final vem ordenado por posicao', () => {
     const resultado = validarLinhas([
       linha({ posicao: 3, numero_processo: '900000003' }),

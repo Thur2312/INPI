@@ -19,3 +19,10 @@ export const PAUSA_ENTRE_ACOES_MAX_MS = 4000;
 /** Largada escalonada dos workers (spec: 10–15s entre um worker e o próximo). */
 export const LARGADA_WORKER_MIN_MS = 10_000;
 export const LARGADA_WORKER_MAX_MS = 15_000;
+
+/** Intervalo de polling do verificador único de abertura de cota (spec: 20-30s). */
+export const VERIFICADOR_INTERVALO_MIN_MS = 20_000;
+export const VERIFICADOR_INTERVALO_MAX_MS = 30_000;
+
+/** Espera de um worker antes de checar a fila de novo quando ela está vazia/pausada. */
+export const ESPERA_FILA_VAZIA_MS = 3_000;

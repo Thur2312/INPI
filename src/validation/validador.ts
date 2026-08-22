@@ -23,14 +23,19 @@ export interface LinhaProcessada {
 /**
  * Orquestra a validação completa de uma planilha já importada:
  * 1. valida dígito verificador de CPF/CNPJ e formato do número de processo;
- * 2. rejeita duplicidade de numero_processo (ambiguidade — não decidimos
- *    qual das duas linhas é a correta, isso é humano);
+ * 2. rejeita duplicidade de numero_processo — tanto dentro do próprio lote
+ *    quanto contra `numerosProcessoExistentes` (processos já gravados no
+ *    banco por uma importação anterior; ver `importarPlanilhaParaBanco`) —
+ *    ambiguidade que não decidimos sozinhos, isso é humano;
  * 3. aplica o teto de 10 requerimentos por titular sobre o que sobrou.
  *
  * Cada linha sai com um status final e, se não for VALIDADO, um motivo
  * legível — é o que alimenta o relatório de pendências.
  */
-export function validarLinhas(linhas: LinhaImportada[]): LinhaProcessada[] {
+export function validarLinhas(
+  linhas: LinhaImportada[],
+  numerosProcessoExistentes: ReadonlySet<string> = new Set(),
+): LinhaProcessada[] {
   const pendentes: LinhaProcessada[] = [];
   const candidatos: (CandidatoProcesso & { titularDocumentoOriginal: string })[] = [];
 
@@ -48,6 +53,7 @@ export function validarLinhas(linhas: LinhaImportada[]): LinhaProcessada[] {
     const docResultado = validarDocumento(dados.titular_documento);
     const numeroResultado = validarNumeroProcesso(dados.numero_processo);
     const numeroDuplicado = (contagemPorNumeroProcesso.get(numeroResultado.normalizado) ?? 0) > 1;
+    const numeroJaNoBanco = numerosProcessoExistentes.has(numeroResultado.normalizado);
 
     const problemas: string[] = [];
     if (!docResultado.valido) {
@@ -60,6 +66,11 @@ export function validarLinhas(linhas: LinhaImportada[]): LinhaProcessada[] {
     }
     if (numeroDuplicado) {
       problemas.push(`numero_processo "${numeroResultado.normalizado}" duplicado na planilha`);
+    }
+    if (numeroJaNoBanco) {
+      problemas.push(
+        `numero_processo "${numeroResultado.normalizado}" já existe no banco (importação anterior?) — não reimportado, evita gerar uma segunda GRU para o mesmo processo`,
+      );
     }
 
     if (problemas.length > 0) {

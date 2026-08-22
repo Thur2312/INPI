@@ -12,18 +12,24 @@ let pastaTemp: string;
 let db: Database.Database;
 
 function inserirProcesso(
-  overrides: Partial<{ posicao: number; fila: 'PRINCIPAL' | 'RESERVA'; status: string }> = {},
+  overrides: Partial<{
+    posicao: number;
+    fila: 'PRINCIPAL' | 'RESERVA';
+    status: string;
+    numeroProcesso: string;
+  }> = {},
 ): number {
   const info = db
     .prepare(
       `
       INSERT INTO processos (posicao, fila, titular_documento, numero_processo, objeto_peticao, status)
-      VALUES (@posicao, @fila, '11144477735', '940328100', 'TPH', @status)
+      VALUES (@posicao, @fila, '11144477735', @numeroProcesso, 'TPH', @status)
     `,
     )
     .run({
       posicao: overrides.posicao ?? 1,
       fila: overrides.fila ?? 'PRINCIPAL',
+      numeroProcesso: overrides.numeroProcesso ?? `9${String(overrides.posicao ?? 1).padStart(8, '0')}`,
       status: overrides.status ?? 'AGUARDANDO_ABERTURA',
     });
   return Number(info.lastInsertRowid);

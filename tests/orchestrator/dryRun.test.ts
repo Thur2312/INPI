@@ -71,7 +71,7 @@ describe('executarDryRun', () => {
   it('processa só os N primeiros da fila (PRINCIPAL antes de RESERVA, por posição) e nunca muda status/tentativas/worker no banco', async () => {
     inserirProcesso({ posicao: 3, fila: 'PRINCIPAL' });
     inserirProcesso({ posicao: 1, fila: 'PRINCIPAL' });
-    inserirProcesso({ posicao: 1, fila: 'RESERVA' });
+    inserirProcesso({ posicao: 1, fila: 'RESERVA', numeroProcesso: '900000011' });
     inserirProcesso({ posicao: 2, fila: 'PRINCIPAL' });
 
     const antes = snapshotProcessos();

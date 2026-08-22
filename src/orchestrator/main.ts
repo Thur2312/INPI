@@ -68,6 +68,17 @@ async function main(): Promise<void> {
 
   const browser = await chromium.launch({ headless: true });
 
+  logger.info('parâmetros de ritmo desta operação', {
+    maxWorkers: env.MAX_WORKERS,
+    pausaEntreAcoesMinMs: env.PAUSA_ENTRE_ACOES_MIN_MS,
+    pausaEntreAcoesMaxMs: env.PAUSA_ENTRE_ACOES_MAX_MS,
+    largadaWorkerMinMs: env.LARGADA_WORKER_MIN_MS,
+    largadaWorkerMaxMs: env.LARGADA_WORKER_MAX_MS,
+    verificadorIntervaloMinMs: env.VERIFICADOR_INTERVALO_MIN_MS,
+    verificadorIntervaloMaxMs: env.VERIFICADOR_INTERVALO_MAX_MS,
+    esperaFilaVaziaMs: env.ESPERA_FILA_VAZIA_MS,
+  });
+
   const operacao = rodarOperacao({
     db,
     browser,
@@ -80,6 +91,13 @@ async function main(): Promise<void> {
     backupIntervaloMinutos: env.BACKUP_INTERVALO_MINUTOS,
     orfaoTimeoutMinutos: env.ORFAO_TIMEOUT_MINUTOS,
     pastaRelatorios: join(env.OUTPUT_DIR, 'relatorios'),
+    pausaEntreAcoesMinMs: env.PAUSA_ENTRE_ACOES_MIN_MS,
+    pausaEntreAcoesMaxMs: env.PAUSA_ENTRE_ACOES_MAX_MS,
+    largadaMinMs: env.LARGADA_WORKER_MIN_MS,
+    largadaMaxMs: env.LARGADA_WORKER_MAX_MS,
+    verificadorIntervaloMinMs: env.VERIFICADOR_INTERVALO_MIN_MS,
+    verificadorIntervaloMaxMs: env.VERIFICADOR_INTERVALO_MAX_MS,
+    esperaFilaVaziaMs: env.ESPERA_FILA_VAZIA_MS,
   });
 
   let encerrando = false;

@@ -1,6 +1,8 @@
 const INTERVALO_POLLING_MS = 3000;
+const INTERVALO_LOG_MS = 4000;
 
 const elBadge = document.getElementById('status-badge');
+const elBadgeProcesso = document.getElementById('status-processo');
 const elMotivo = document.getElementById('status-motivo');
 const elBtnRetomar = document.getElementById('btn-retomar');
 const elMetricas = document.getElementById('metricas');
@@ -9,7 +11,27 @@ const elFiltroStatus = document.getElementById('filtro-status');
 const elCorpoTabela = document.getElementById('corpo-tabela');
 const elUltimaAtualizacao = document.getElementById('ultima-atualizacao');
 
+const elFormImportar = document.getElementById('form-importar');
+const elCampoPlanilha = document.getElementById('campo-planilha');
+const elBtnImportar = document.getElementById('btn-importar');
+const elResultadoImportar = document.getElementById('resultado-importar');
+
+const elFormIniciar = document.getElementById('form-iniciar');
+const elCampoMaxWorkers = document.getElementById('campo-max-workers');
+const elCampoPausaMin = document.getElementById('campo-pausa-min');
+const elCampoPausaMax = document.getElementById('campo-pausa-max');
+const elCampoLargadaMin = document.getElementById('campo-largada-min');
+const elCampoLargadaMax = document.getElementById('campo-largada-max');
+const elCampoVerificadorMin = document.getElementById('campo-verificador-min');
+const elCampoVerificadorMax = document.getElementById('campo-verificador-max');
+const elBtnIniciar = document.getElementById('btn-iniciar');
+const elBtnParar = document.getElementById('btn-parar');
+const elResultadoIniciar = document.getElementById('resultado-iniciar');
+
+const elLogOperacao = document.getElementById('log-operacao');
+
 let ultimoStatusPayload = null;
+let processoRodando = false;
 
 function classeBadgeOperacao(status) {
   if (status === 'RODANDO') return 'badge--rodando';
@@ -34,6 +56,30 @@ function renderizarOperacao(operacao) {
   elBadge.className = `badge ${classeBadgeOperacao(operacao.status)}`;
   elMotivo.textContent = operacao.motivo ?? '';
   elBtnRetomar.classList.toggle('oculto', operacao.status !== 'PAUSADA');
+}
+
+function renderizarProcessoOperacao(processoOperacao) {
+  processoRodando = processoOperacao.rodando;
+  if (processoOperacao.rodando) {
+    elBadgeProcesso.textContent = `processo: rodando (pid ${processoOperacao.pid})`;
+    elBadgeProcesso.className = 'badge badge--processo-rodando';
+  } else {
+    elBadgeProcesso.textContent = 'processo: parado';
+    elBadgeProcesso.className = 'badge badge--processo-parado';
+  }
+  elBtnIniciar.disabled = processoOperacao.rodando;
+  elBtnParar.classList.toggle('oculto', !processoOperacao.rodando);
+  for (const campo of [
+    elCampoMaxWorkers,
+    elCampoPausaMin,
+    elCampoPausaMax,
+    elCampoLargadaMin,
+    elCampoLargadaMax,
+    elCampoVerificadorMin,
+    elCampoVerificadorMax,
+  ]) {
+    campo.disabled = processoOperacao.rodando;
+  }
 }
 
 function renderizarMetricas(contagens, total) {
@@ -137,6 +183,7 @@ async function atualizar() {
 
     const total = Object.values(payload.contagens).reduce((a, b) => a + b, 0);
     renderizarOperacao(payload.operacao);
+    renderizarProcessoOperacao(payload.processoOperacao);
     renderizarMetricas(payload.contagens, total);
     atualizarOpcoesFiltro(payload.contagens);
     renderizarTabela(payload.processos);
@@ -170,5 +217,134 @@ elBtnRetomar.addEventListener('click', async () => {
   }
 });
 
+async function carregarConfigPadrao() {
+  try {
+    const resposta = await fetch('/api/config');
+    if (!resposta.ok) return;
+    const config = await resposta.json();
+    elCampoMaxWorkers.value = config.maxWorkers;
+    elCampoPausaMin.value = config.pausaEntreAcoesMinMs;
+    elCampoPausaMax.value = config.pausaEntreAcoesMaxMs;
+    elCampoLargadaMin.value = config.largadaWorkerMinMs;
+    elCampoLargadaMax.value = config.largadaWorkerMaxMs;
+    elCampoVerificadorMin.value = config.verificadorIntervaloMinMs;
+    elCampoVerificadorMax.value = config.verificadorIntervaloMaxMs;
+  } catch {
+    // formulário fica com placeholder vazio — não é bloqueante.
+  }
+}
+
+elFormImportar.addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const arquivo = elCampoPlanilha.files[0];
+  if (!arquivo) return;
+
+  elBtnImportar.disabled = true;
+  elResultadoImportar.className = 'resultado-importar';
+  elResultadoImportar.textContent = 'importando…';
+
+  try {
+    const formData = new FormData();
+    formData.append('planilha', arquivo);
+    const resposta = await fetch('/api/importar', { method: 'POST', body: formData });
+    const corpo = await resposta.json();
+    if (!resposta.ok) throw new Error(corpo.erro ?? `status ${resposta.status}`);
+
+    elResultadoImportar.className = 'resultado-importar resultado-importar--sucesso';
+    elResultadoImportar.textContent =
+      `${corpo.totalNaPlanilha} linha(s) na planilha — ` +
+      `${corpo.validados} validada(s), ${corpo.pendenciaDados} pendência de dados, ` +
+      `${corpo.pendenciaLimite} pendência de limite, ${corpo.errosDeFormato.length} rejeitada(s) no schema.`;
+    elFormImportar.reset();
+    await atualizar();
+  } catch (erro) {
+    elResultadoImportar.className = 'resultado-importar resultado-importar--erro';
+    elResultadoImportar.textContent = `falha ao importar: ${erro.message}`;
+  } finally {
+    elBtnImportar.disabled = false;
+  }
+});
+
+function valorOuIndefinido(el) {
+  return el.value === '' ? undefined : Number(el.value);
+}
+
+elFormIniciar.addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+
+  const confirmado = confirm(
+    'Isso inicia a automação de verdade (npm run operar) — vai emitir GRUs reais assim que a cota abrir. Confirma?',
+  );
+  if (!confirmado) return;
+
+  elBtnIniciar.disabled = true;
+  elResultadoIniciar.className = 'resultado-importar';
+  elResultadoIniciar.textContent = 'iniciando…';
+
+  const overrides = {
+    maxWorkers: valorOuIndefinido(elCampoMaxWorkers),
+    pausaEntreAcoesMinMs: valorOuIndefinido(elCampoPausaMin),
+    pausaEntreAcoesMaxMs: valorOuIndefinido(elCampoPausaMax),
+    largadaWorkerMinMs: valorOuIndefinido(elCampoLargadaMin),
+    largadaWorkerMaxMs: valorOuIndefinido(elCampoLargadaMax),
+    verificadorIntervaloMinMs: valorOuIndefinido(elCampoVerificadorMin),
+    verificadorIntervaloMaxMs: valorOuIndefinido(elCampoVerificadorMax),
+  };
+
+  try {
+    const resposta = await fetch('/api/iniciar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(overrides),
+    });
+    const corpo = await resposta.json();
+    if (!resposta.ok) throw new Error(corpo.erro ?? `status ${resposta.status}`);
+
+    elResultadoIniciar.className = 'resultado-importar resultado-importar--sucesso';
+    elResultadoIniciar.textContent = `operação iniciada (pid ${corpo.pid}).`;
+    await atualizar();
+  } catch (erro) {
+    elResultadoIniciar.className = 'resultado-importar resultado-importar--erro';
+    elResultadoIniciar.textContent = `falha ao iniciar: ${erro.message}`;
+    elBtnIniciar.disabled = false;
+  }
+});
+
+elBtnParar.addEventListener('click', async () => {
+  const confirmado = confirm(
+    'Parar a operação? Cada worker termina o item que está processando agora antes de encerrar — não é instantâneo.',
+  );
+  if (!confirmado) return;
+
+  elBtnParar.disabled = true;
+  try {
+    await fetch('/api/parar', { method: 'POST' });
+    elResultadoIniciar.className = 'resultado-importar';
+    elResultadoIniciar.textContent = 'sinal de parada enviado — aguardando os workers encerrarem.';
+    await atualizar();
+  } finally {
+    elBtnParar.disabled = false;
+  }
+});
+
+async function atualizarLog() {
+  try {
+    const resposta = await fetch('/api/log');
+    if (!resposta.ok) return;
+    const corpo = await resposta.json();
+    const estavaNoFim =
+      elLogOperacao.scrollTop + elLogOperacao.clientHeight >= elLogOperacao.scrollHeight - 4;
+    elLogOperacao.textContent = corpo.linhas.length > 0 ? corpo.linhas.join('\n') : 'nada ainda…';
+    if (estavaNoFim) {
+      elLogOperacao.scrollTop = elLogOperacao.scrollHeight;
+    }
+  } catch {
+    // painel continua com o último log conhecido — não é crítico.
+  }
+}
+
+carregarConfigPadrao();
 atualizar();
+atualizarLog();
 setInterval(atualizar, INTERVALO_POLLING_MS);
+setInterval(atualizarLog, INTERVALO_LOG_MS);

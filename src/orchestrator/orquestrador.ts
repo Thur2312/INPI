@@ -41,6 +41,9 @@ export interface OpcoesOperacao {
   esperaFilaVaziaMs?: number;
   pausaEntreAcoesMinMs?: number;
   pausaEntreAcoesMaxMs?: number;
+  /** Override do intervalo de polling do verificador de abertura (produção usa as constantes de 20–30s). */
+  verificadorIntervaloMinMs?: number;
+  verificadorIntervaloMaxMs?: number;
 }
 
 export interface OperacaoEmAndamento {
@@ -82,6 +85,8 @@ export function rodarOperacao(opcoes: OpcoesOperacao): OperacaoEmAndamento {
     esperaFilaVaziaMs,
     pausaEntreAcoesMinMs,
     pausaEntreAcoesMaxMs,
+    verificadorIntervaloMinMs,
+    verificadorIntervaloMaxMs,
   } = opcoes;
 
   const sinal = { parar: false };
@@ -126,7 +131,16 @@ export function rodarOperacao(opcoes: OpcoesOperacao): OperacaoEmAndamento {
             },
           },
           objetoPeticaoTexto,
-          { logger, sinal },
+          {
+            logger,
+            sinal,
+            ...(verificadorIntervaloMinMs !== undefined && {
+              intervaloMinMs: verificadorIntervaloMinMs,
+            }),
+            ...(verificadorIntervaloMaxMs !== undefined && {
+              intervaloMaxMs: verificadorIntervaloMaxMs,
+            }),
+          },
         ).finally(() => watcherContext.close()),
       );
     } else {
