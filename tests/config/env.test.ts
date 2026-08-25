@@ -18,6 +18,11 @@ describe('carregarEnv', () => {
     expect(env.VERIFICADOR_INTERVALO_MIN_MS).toBe(20_000);
     expect(env.VERIFICADOR_INTERVALO_MAX_MS).toBe(30_000);
     expect(env.ESPERA_FILA_VAZIA_MS).toBe(3000);
+    expect(env.HEADLESS).toBe(true);
+  });
+
+  it('permite rodar headed (HEADLESS=false) quando explicitamente configurado', () => {
+    expect(carregarEnv({ ...BASE, HEADLESS: 'false' }).HEADLESS).toBe(false);
   });
 
   it('permite MAX_WORKERS acima de 4 (até o teto de sanidade de 20)', () => {

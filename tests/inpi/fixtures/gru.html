@@ -38,10 +38,26 @@
         <option value="300">Marcas</option>
       </select>
 
-      <select id="select-servico">
+      <!--
+        Simula o select2 real do INPI: o <select> nativo fica escondido e
+        um widget clicável no lugar — ver `SERVICO_SELECT2` em
+        `src/inpi/selectors.ts` e o comentário em
+        `AdapterInpi.selecionarServico3020ComRetry` sobre por que o
+        adapter interage com o widget em vez do <select> nativo.
+      -->
+      <select id="select-servico" style="display: none">
         <option value="">Selecione</option>
         <option value="3020">3020 - Trâmite Prioritário</option>
       </select>
+      <span aria-labelledby="select2-select-servico-container" id="servico-select2-widget"
+        >--Selecione--</span
+      >
+      <div id="servico-select2-dropdown" style="display: none">
+        <input class="select2-search__field" />
+        <ul>
+          <li class="select2-results__option" data-value="3020">3020 - Trâmite Prioritário</li>
+        </ul>
+      </div>
 
       <select id="select-dados-servico-objeto-peticao">
         <option value="">Selecione</option>
@@ -92,6 +108,15 @@
           document.getElementById('modal-pesquisar-cliente').style.display = 'none';
         }
       });
+
+      document.getElementById('servico-select2-widget').onclick = function () {
+        document.getElementById('servico-select2-dropdown').style.display = 'block';
+      };
+      document.querySelector('.select2-results__option').onclick = function () {
+        document.getElementById('select-servico').value = this.getAttribute('data-value');
+        document.getElementById('servico-select2-widget').textContent = this.textContent;
+        document.getElementById('servico-select2-dropdown').style.display = 'none';
+      };
 
       var selectObjeto = document.getElementById('select-dados-servico-objeto-peticao');
       (c.opcoesObjeto || []).forEach(function (texto, indice) {

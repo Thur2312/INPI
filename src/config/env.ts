@@ -43,6 +43,19 @@ const envSchema = z
     ORFAO_TIMEOUT_MINUTOS: z.coerce.number().int().min(1).default(15),
     BACKUP_INTERVALO_MINUTOS: z.coerce.number().int().min(1).default(5),
 
+    /**
+     * Cada worker já roda num `BrowserContext` isolado (sessão própria,
+     * como um operador humano diferente) — com `HEADLESS=false` isso
+     * aparece na tela como uma janela do Chrome por worker, útil para
+     * acompanhar a operação ao vivo localmente. Default `true` porque a
+     * VPS (ver `docs/runbook-vps.md`) não tem display: rodar headed lá
+     * sem Xvfb configurado derruba o processo.
+     */
+    HEADLESS: z
+      .string()
+      .default('true')
+      .transform((v) => v.toLowerCase() === 'true'),
+
     // Ritmo entre ações de um mesmo worker. Padrão = comportamento já
     // testado (2-4s). Reduzir aumenta throughput por worker, mas também a
     // chance de parecer tráfego robótico.

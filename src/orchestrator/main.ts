@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   );
 
   if (argumentos.dryRun) {
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({ headless: env.HEADLESS });
     const context = await browser.newContext();
     const adapter = await AdapterInpi.criar(context);
 
@@ -66,9 +66,10 @@ async function main(): Promise<void> {
     hardStop22h: env.HARD_STOP_22H,
   };
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: env.HEADLESS });
 
   logger.info('parâmetros de ritmo desta operação', {
+    headless: env.HEADLESS,
     maxWorkers: env.MAX_WORKERS,
     pausaEntreAcoesMinMs: env.PAUSA_ENTRE_ACOES_MIN_MS,
     pausaEntreAcoesMaxMs: env.PAUSA_ENTRE_ACOES_MAX_MS,

@@ -38,6 +38,22 @@ export const SERVICO = {
   confirmar: '#button_confirmar',
 } as const;
 
+/**
+ * `#select-servico` (`SERVICO.codigo`) é escondido (`display: none`) e
+ * substituído por um widget select2 — o INPI não reage a um `change`
+ * disparado direto no `<select>` nativo do mesmo jeito que reage a uma
+ * interação real no widget (o handler que popula `SERVICO.objeto` lê algo
+ * do próprio evento de seleção do select2, não só o valor final do
+ * select). Por isso a seleção do serviço 3020 clica no widget de verdade
+ * em vez de usar `page.selectOption`. Nome do container gerado pelo
+ * select2 segue o padrão `select2-{id-do-select-original}-container`.
+ */
+export const SERVICO_SELECT2 = {
+  widget: 'span[aria-labelledby="select2-select-servico-container"]',
+  campoBusca: '.select2-search__field',
+  resultados: '.select2-results__option',
+} as const;
+
 export const CONFERENCIA = {
   tabela: '#tabela-preview-dados-servicos',
   valorTotal: '#valor-total-guia',

@@ -23,6 +23,7 @@ import {
   MINHAS_GRUS_MAX_DIAS,
   ROTAS,
   SERVICO,
+  SERVICO_SELECT2,
 } from './selectors.js';
 
 export interface DadosEmissaoGru {
@@ -138,9 +139,8 @@ export class AdapterInpi {
    * batendo no INPI em loop ao mesmo tempo.
    *
    * Assume que o dropdown de objeto é populado a partir do tipo de
-   * serviço (Marcas/3020) selecionado, independente de cliente — não
-   * confirmado contra o sistema real; valide com --dry-run antes do dia
-   * da operação caso o dropdown só apareça após selecionar um cliente.
+   * serviço (Marcas/3020) selecionado, independente de cliente —
+   * confirmado contra o sistema real via --dry-run em 25/08/2026.
    */
   async objetoPeticaoDisponivel(
     textoBuscado: string,
@@ -151,8 +151,10 @@ export class AdapterInpi {
       await this.page.goto(ROTAS.gerar);
     }
     await this.page.selectOption(SERVICO.tipo, TIPO_SERVICO_MARCAS_VALUE);
-    await this.page.selectOption(SERVICO.codigo, CODIGO_SERVICO_3020);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForSelector(`${SERVICO.codigo} option[value="${CODIGO_SERVICO_3020}"]`, {
+      state: 'attached',
+    });
+    await this.selecionarServico3020ComRetry();
 
     const opcoes = this.page.locator(`${SERVICO.objeto} option`);
     const textos = await opcoes.allTextContents();
@@ -334,9 +336,18 @@ export class AdapterInpi {
    */
   private async preencherServico(dados: DadosEmissaoGru): Promise<string> {
     await this.page.selectOption(SERVICO.tipo, TIPO_SERVICO_MARCAS_VALUE);
-    await this.page.selectOption(SERVICO.codigo, CODIGO_SERVICO_3020);
+    // Espera o <option> do serviço 3020 existir de verdade antes de
+    // selecioná-lo — sem isso, `selecionarServico3020ComRetry` pode
+    // disparar o change contra um <select> ainda sendo populado pelo AJAX
+    // de `buscar/servico/diretoria/{tipo}` (ver comentário lá embaixo).
+    // `state: 'attached'`, não o padrão 'visible': um <option> nunca tem
+    // bounding box enquanto o <select> está fechado — esperar 'visible'
+    // trava para sempre.
+    await this.page.waitForSelector(`${SERVICO.codigo} option[value="${CODIGO_SERVICO_3020}"]`, {
+      state: 'attached',
+    });
 
-    const opcoes = await this.page.locator(`${SERVICO.objeto} option`).allTextContents();
+    const opcoes = await this.selecionarServico3020ComRetry();
     const regex = new RegExp(escapeRegExp(dados.objetoPeticaoTexto), 'i');
     const opcaoEncontrada = opcoes.find((texto) => regex.test(texto));
 
@@ -347,6 +358,59 @@ export class AdapterInpi {
     await this.page.selectOption(SERVICO.objeto, { label: opcaoEncontrada });
     await this.page.fill(SERVICO.processo, dados.numeroProcesso);
     return this.page.locator(SERVICO.objeto).inputValue();
+  }
+
+  /**
+   * Seleciona o serviço 3020 e devolve as opções do dropdown de objeto da
+   * petição que essa seleção popula.
+   *
+   * `#select-servico` (`SERVICO.codigo`) é escondido pelo select2 — usar
+   * `page.selectOption` direto nele (com `force`, senão o Playwright
+   * espera uma visibilidade que nunca vem) chega a marcar o valor certo,
+   * mas o handler do INPI que popula `SERVICO.objeto` fica vazio: ele
+   * depende de algo do próprio fluxo de seleção do widget select2, não só
+   * do evento `change` final no `<select>` nativo (confirmado em teste
+   * manual contra o site real — `force` nunca populou o objeto, um clique
+   * de verdade no widget populou). Por isso aqui é clique real: abre o
+   * widget, filtra pelo código no campo de busca (a classe "autocomplete"
+   * do `<select>` original liga essa busca) e clica no resultado.
+   *
+   * O motivo do retry: mesmo clicando de verdade, a mesma sequência às
+   * vezes dispara `GET .../pesquisar/servico/3020/diretoria/300` (correto,
+   * popula o objeto) e às vezes `.../diretoria/` com o código da diretoria
+   * vazio (404, objeto fica vazio) — sem diferença observável do lado do
+   * Playwright, aparenta ser uma corrida interna do JS do INPI. Repetir a
+   * interação dá outra chance de a corrida resolver a favor.
+   */
+  private async selecionarServico3020ComRetry(): Promise<string[]> {
+    const MAX_TENTATIVAS = 3;
+
+    for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa += 1) {
+      await this.page.click(SERVICO_SELECT2.widget);
+      await this.page.waitForSelector(SERVICO_SELECT2.resultados);
+
+      const campoBusca = this.page.locator(SERVICO_SELECT2.campoBusca);
+      if ((await campoBusca.count()) > 0) {
+        await campoBusca.fill(CODIGO_SERVICO_3020);
+      }
+
+      await this.page
+        .locator(SERVICO_SELECT2.resultados, { hasText: CODIGO_SERVICO_3020 })
+        .first()
+        .click();
+      await this.page.waitForLoadState('networkidle');
+
+      const opcoes = await this.page.locator(`${SERVICO.objeto} option`).allTextContents();
+      // "--Selecione--" sozinho = a corrida deu ruim e o objeto não populou.
+      if (opcoes.length > 1) {
+        return opcoes;
+      }
+      if (tentativa < MAX_TENTATIVAS) {
+        await this.page.waitForTimeout(500);
+      }
+    }
+
+    return [];
   }
 
   private async conferirValor(valorEsperado: number): Promise<string> {
