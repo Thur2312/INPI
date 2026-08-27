@@ -66,6 +66,16 @@ afterEach(async () => {
   rmSync(pastaTemp, { recursive: true, force: true });
 });
 
+describe('interface estática (src/portalCliente/public)', () => {
+  it('serve o index.html na raiz', async () => {
+    const resposta = await fetch(`${baseUrl}/`);
+    expect(resposta.status).toBe(200);
+    expect(resposta.headers.get('content-type')).toContain('text/html');
+    const corpo = await resposta.text();
+    expect(corpo).toContain('Portal do Cliente');
+  });
+});
+
 describe('POST /api/login', () => {
   it('rejeita documento com dígito verificador inválido', async () => {
     const resposta = await fetch(`${baseUrl}/api/login`, {

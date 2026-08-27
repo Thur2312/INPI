@@ -13,7 +13,11 @@ describe('verificarAbertura', () => {
 
     await verificarAbertura(
       { objetoPeticaoDisponivel },
-      { obterOperacao: () => ({ status: 'RODANDO' }), liberarOperacao },
+      {
+        obterOperacao: () => ({ status: 'RODANDO' }),
+        liberarOperacao,
+        registrarAlertaCategoria: vi.fn(),
+      },
       'TPH',
       '11144477735',
       '940328100',
@@ -39,7 +43,11 @@ describe('verificarAbertura', () => {
 
     await verificarAbertura(
       { objetoPeticaoDisponivel },
-      { obterOperacao: () => ({ status }), liberarOperacao },
+      {
+        obterOperacao: () => ({ status }),
+        liberarOperacao,
+        registrarAlertaCategoria: vi.fn(),
+      },
       'Plataforma de Mercado Virtual',
       '11144477735',
       '940328100',
@@ -61,7 +69,11 @@ describe('verificarAbertura', () => {
 
     await verificarAbertura(
       { objetoPeticaoDisponivel },
-      { obterOperacao: () => ({ status: 'AGUARDANDO_ABERTURA' }), liberarOperacao },
+      {
+        obterOperacao: () => ({ status: 'AGUARDANDO_ABERTURA' }),
+        liberarOperacao,
+        registrarAlertaCategoria: vi.fn(),
+      },
       'TPH',
       '11144477735',
       '940328100',
@@ -86,7 +98,11 @@ describe('verificarAbertura', () => {
 
     await verificarAbertura(
       { objetoPeticaoDisponivel },
-      { obterOperacao: () => ({ status: 'AGUARDANDO_ABERTURA' }), liberarOperacao },
+      {
+        obterOperacao: () => ({ status: 'AGUARDANDO_ABERTURA' }),
+        liberarOperacao,
+        registrarAlertaCategoria: vi.fn(),
+      },
       'TPH',
       '11144477735',
       '940328100',
@@ -94,5 +110,53 @@ describe('verificarAbertura', () => {
     );
 
     expect(liberarOperacao).not.toHaveBeenCalled();
+  });
+
+  it('avisa (sem escolher sozinho) quando uma opção nova aparece e não bate com o texto configurado', async () => {
+    const objetoPeticaoDisponivel = vi
+      .fn()
+      // 1ª checagem: define a linha de base (nada aqui ainda é "novo").
+      .mockResolvedValueOnce({ encontrado: false, value: null, opcoesAtuais: ['Selecione'] })
+      // 2ª: "Ação na Justiça" aparece — não bate com o texto configurado.
+      .mockResolvedValueOnce({
+        encontrado: false,
+        value: null,
+        opcoesAtuais: ['Selecione', 'Ação na Justiça'],
+      })
+      // 3ª: mesma opção de novo — não deve gerar um segundo alerta.
+      .mockResolvedValueOnce({
+        encontrado: false,
+        value: null,
+        opcoesAtuais: ['Selecione', 'Ação na Justiça'],
+      });
+    const liberarOperacao = vi.fn();
+    const registrarAlertaCategoria = vi.fn();
+    const logger = criarLoggerFalso();
+    const sinal = { parar: false };
+
+    setTimeout(() => {
+      sinal.parar = true;
+    }, 15);
+
+    await verificarAbertura(
+      { objetoPeticaoDisponivel },
+      {
+        obterOperacao: () => ({ status: 'AGUARDANDO_ABERTURA' }),
+        liberarOperacao,
+        registrarAlertaCategoria,
+      },
+      'Plataforma de Mercado Virtual',
+      '11144477735',
+      '940328100',
+      { logger, intervaloMinMs: 1, intervaloMaxMs: 2, sinal },
+    );
+
+    expect(liberarOperacao).not.toHaveBeenCalled();
+    expect(registrarAlertaCategoria).toHaveBeenCalledTimes(1);
+    expect(registrarAlertaCategoria).toHaveBeenCalledWith(['Ação na Justiça']);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('opções novas'),
+      expect.objectContaining({ opcoesNovas: ['Ação na Justiça'] }),
+    );
   });
 });

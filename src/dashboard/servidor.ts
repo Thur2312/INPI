@@ -8,7 +8,7 @@ import type Database from 'better-sqlite3';
 import express, { type Express } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { obterOperacao, retomarOperacao } from '../db/operacao.js';
+import { limparAlertaCategoria, obterOperacao, retomarOperacao } from '../db/operacao.js';
 import { contarPorStatus, listarTodosProcessos } from '../db/processos.js';
 import { gerarCsvString, gerarWorkbook } from '../reports/relatorio.js';
 import { criarMiddlewareBasicAuth } from '../utils/basicAuth.js';
@@ -133,6 +133,11 @@ export function criarApp(db: Database.Database, opcoes: CriarAppOpcoes): Express
       linhas = [];
     }
     res.json({ linhas: linhas.slice(-300) });
+  });
+
+  app.post('/api/alerta-categoria/descartar', (_req, res) => {
+    limparAlertaCategoria(db);
+    res.json(obterOperacao(db));
   });
 
   app.post('/api/retomar', (_req, res) => {

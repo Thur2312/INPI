@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type Database from 'better-sqlite3';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { z } from 'zod';
@@ -13,6 +14,8 @@ import { somenteDigitos, validarDocumento } from '../domain/validarDocumento.js'
 import type { Processo } from '../domain/types.js';
 import { criarMiddlewareBasicAuth } from '../utils/basicAuth.js';
 import { assinarToken, verificarToken } from './token.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const VALIDADE_SESSAO_PADRAO_MS = 24 * 60 * 60 * 1000;
 
@@ -174,6 +177,8 @@ export function criarAppPortalCliente(db: Database.Database, opcoes: CriarAppPor
 
     enviarPdf(processo.caminhoPdf, raizProjeto, processo.numeroProcesso, res, next);
   });
+
+  app.use(express.static(join(__dirname, 'public')));
 
   return app;
 }

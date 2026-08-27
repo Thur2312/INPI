@@ -5,6 +5,9 @@ const elBadge = document.getElementById('status-badge');
 const elBadgeProcesso = document.getElementById('status-processo');
 const elMotivo = document.getElementById('status-motivo');
 const elBtnRetomar = document.getElementById('btn-retomar');
+const elAlertaCategoria = document.getElementById('alerta-categoria');
+const elAlertaCategoriaTexto = document.getElementById('alerta-categoria-texto');
+const elBtnDescartarAlerta = document.getElementById('btn-descartar-alerta');
 const elMetricas = document.getElementById('metricas');
 const elFiltroTexto = document.getElementById('filtro-texto');
 const elFiltroStatus = document.getElementById('filtro-status');
@@ -56,6 +59,18 @@ function renderizarOperacao(operacao) {
   elBadge.className = `badge ${classeBadgeOperacao(operacao.status)}`;
   elMotivo.textContent = operacao.motivo ?? '';
   elBtnRetomar.classList.toggle('oculto', operacao.status !== 'PAUSADA');
+}
+
+function renderizarAlertaCategoria(operacao) {
+  const opcoes = operacao.alertaCategoriaOpcoes;
+  if (!opcoes || opcoes.length === 0) {
+    elAlertaCategoria.classList.add('oculto');
+    return;
+  }
+  elAlertaCategoria.classList.remove('oculto');
+  elAlertaCategoriaTexto.textContent =
+    `Apareceu no dropdown de objeto da petição: "${opcoes.join('", "')}" — ` +
+    'nenhuma bate com o texto configurado. Confira se é a categoria certa antes de ajustar a configuração.';
 }
 
 function renderizarProcessoOperacao(processoOperacao) {
@@ -183,6 +198,7 @@ async function atualizar() {
 
     const total = Object.values(payload.contagens).reduce((a, b) => a + b, 0);
     renderizarOperacao(payload.operacao);
+    renderizarAlertaCategoria(payload.operacao);
     renderizarProcessoOperacao(payload.processoOperacao);
     renderizarMetricas(payload.contagens, total);
     atualizarOpcoesFiltro(payload.contagens);
@@ -214,6 +230,16 @@ elBtnRetomar.addEventListener('click', async () => {
     alert(`não foi possível retomar: ${erro.message}`);
   } finally {
     elBtnRetomar.disabled = false;
+  }
+});
+
+elBtnDescartarAlerta.addEventListener('click', async () => {
+  elBtnDescartarAlerta.disabled = true;
+  try {
+    await fetch('/api/alerta-categoria/descartar', { method: 'POST' });
+    await atualizar();
+  } finally {
+    elBtnDescartarAlerta.disabled = false;
   }
 });
 

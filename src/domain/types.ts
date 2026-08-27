@@ -105,4 +105,12 @@ export interface Operacao {
   pausadaEm: string | null;
   retomadaEm: string | null;
   atualizadoEm: string;
+  /**
+   * Opções novas detectadas pelo verificador de abertura no dropdown de
+   * objeto da petição que não batem com o texto configurado — ver
+   * `verificarAbertura`. `null` = nenhum alerta pendente. Nunca decide
+   * sozinho qual é a categoria certa, só avisa.
+   */
+  alertaCategoriaOpcoes: string[] | null;
+  alertaCategoriaEm: string | null;
 }

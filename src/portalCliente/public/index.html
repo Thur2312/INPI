@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Revollution — Portal do Cliente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/estilo.css" />
+  </head>
+  <body>
+    <header class="topo">
+      <div class="marca">
+        <img
+          class="marca-logo"
+          src="/assets/revollution-logo-full.png"
+          alt="Revollution — Marcas e Patentes"
+        />
+        <span class="marca-separador" aria-hidden="true"></span>
+        <span class="marca-produto">Portal do Cliente · GRU 3020</span>
+      </div>
+      <button id="btn-sair" class="botao botao--fantasma oculto" type="button">Sair</button>
+    </header>
+
+    <main>
+      <section id="tela-login" class="tela-login">
+        <img
+          class="logo-login"
+          src="/assets/revollution-logo-full.png"
+          alt="Revollution — Marcas e Patentes"
+        />
+        <form id="form-login" class="cartao-login">
+          <span class="rotulo-eyebrow">Trâmite prioritário de marcas</span>
+          <h1>Acompanhe seus requerimentos</h1>
+          <p class="ajuda">
+            Informe o CNPJ ou CPF do titular para ver o andamento e baixar as guias já emitidas.
+          </p>
+
+          <label for="campo-documento">CNPJ ou CPF</label>
+          <input
+            id="campo-documento"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="000.000.000-00"
+            required
+          />
+
+          <button id="btn-entrar" class="botao botao--primario" type="submit">Entrar</button>
+          <div id="erro-login" class="erro-login oculto"></div>
+        </form>
+      </section>
+
+      <section id="tela-lista" class="tela-lista oculto">
+        <div class="cabecalho-lista">
+          <span class="rotulo-eyebrow">Meus requerimentos</span>
+          <h1 id="titulo-lista">Seus processos</h1>
+        </div>
+        <div id="lista-processos" class="lista-processos"></div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

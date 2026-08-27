@@ -126,6 +126,35 @@ describe('importarPlanilha — XLSX', () => {
     expect(resultado.linhas[0]?.dados.numero_processo).toBe('940328100');
   });
 
+  it('pula uma aba de instruções antes da aba de dados, identificando pelo cabeçalho (não pela ordem/nome)', async () => {
+    const caminho = join(pastaTemp, 'lote-com-instrucoes.xlsx');
+    const workbook = new ExcelJS.Workbook();
+
+    const instrucoes = workbook.addWorksheet('Instruções');
+    instrucoes.addRow(['Modelo de planilha — Requerimentos de GRU 3020 (INPI)']);
+    instrucoes.addRow(['Preencha a aba "Processos" com um requerimento por linha.']);
+
+    const dados = workbook.addWorksheet('Processos');
+    dados.addRow([
+      'cliente',
+      'titular_documento',
+      'titular_nome',
+      'numero_processo',
+      'objeto_peticao',
+      'prioridade',
+      'protocolos_ja_utilizados',
+      'fila',
+    ]);
+    dados.addRow(['Cliente A', '111.444.777-35', 'Fulano', 940328100, 'TPH', 1, 0, 'PRINCIPAL']);
+    await workbook.xlsx.writeFile(caminho);
+
+    const resultado = await importarPlanilha(caminho);
+
+    expect(resultado.erros).toEqual([]);
+    expect(resultado.linhas).toHaveLength(1);
+    expect(resultado.linhas[0]?.dados.numero_processo).toBe('940328100');
+  });
+
   it('lança quando o workbook não tem nenhuma aba', async () => {
     const caminho = join(pastaTemp, 'vazio.xlsx');
     const workbook = new ExcelJS.Workbook();

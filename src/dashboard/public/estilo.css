@@ -167,6 +167,33 @@ body {
   color: var(--tinta-suave);
 }
 
+.alerta-categoria {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 28px;
+  background: var(--alerta-fundo);
+  color: var(--alerta);
+  border-bottom: 1px solid var(--linha);
+}
+
+.alerta-categoria strong {
+  font-size: 13.5px;
+}
+
+.alerta-categoria p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--tinta);
+}
+
+.alerta-categoria .botao {
+  flex-shrink: 0;
+  border-color: var(--alerta);
+  color: var(--alerta);
+}
+
 .painel-controle {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

@@ -63,7 +63,13 @@
         <option value="">Selecione</option>
       </select>
 
-      <input type="text" id="input-servico-processo-administrativo" />
+      <!--
+        Escondido por padrão, igual ao INPI real — só revela depois da
+        seleção do serviço 3020 (ver `cenario.tentativasRevelarProcesso`
+        abaixo, que simula a instabilidade em que a revelação às vezes não
+        acontece de primeira).
+      -->
+      <input type="text" id="input-servico-processo-administrativo" style="display: none" />
 
       <button type="button" id="button_confirmar">Confirmar</button>
     </div>
@@ -112,10 +118,20 @@
       document.getElementById('servico-select2-widget').onclick = function () {
         document.getElementById('servico-select2-dropdown').style.display = 'block';
       };
+      // Simula a instabilidade real do INPI (ver comentário em
+      // `AdapterInpi.aguardarCampoProcessoComRetry`): por padrão revela na
+      // primeira seleção; `tentativasRevelarProcesso` no cenário adia a
+      // revelação para simular a corrida não acontecendo de primeira.
+      var cliquesServico3020 = 0;
+      var tentativasNecessarias = c.tentativasRevelarProcesso || 1;
       document.querySelector('.select2-results__option').onclick = function () {
         document.getElementById('select-servico').value = this.getAttribute('data-value');
         document.getElementById('servico-select2-widget').textContent = this.textContent;
         document.getElementById('servico-select2-dropdown').style.display = 'none';
+        cliquesServico3020 += 1;
+        if (cliquesServico3020 >= tentativasNecessarias) {
+          document.getElementById('input-servico-processo-administrativo').style.display = 'block';
+        }
       };
 
       var selectObjeto = document.getElementById('select-dados-servico-objeto-peticao');

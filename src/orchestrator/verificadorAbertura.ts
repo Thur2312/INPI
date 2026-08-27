@@ -12,6 +12,12 @@ export interface VerificadorObjeto {
 export interface ControleOperacao {
   obterOperacao(): { status: string };
   liberarOperacao(objetoPeticaoValue: string): void;
+  /**
+   * Chamado quando opções novas aparecem no dropdown sem bater com o texto
+   * configurado — ver `verificarAbertura`. Só regista para o painel, nunca
+   * decide sozinho qual categoria é a certa.
+   */
+  registrarAlertaCategoria(opcoesNovas: readonly string[]): void;
 }
 
 /**
@@ -40,6 +46,15 @@ export async function verificarAbertura(
 ): Promise<void> {
   const { logger, intervaloMinMs = 20_000, intervaloMaxMs = 30_000, sinal } = opcoes;
 
+  // Linha de base das opções já vistas no dropdown (inicializada na primeira
+  // checagem bem-sucedida — antes disso não dá pra distinguir "sempre
+  // esteve aí" de "acabou de aparecer"). Qualquer opção fora dessa base
+  // numa checagem seguinte é "nova": ou a cota abriu com o texto exato
+  // esperado (caso já tratado acima, libera sozinho) ou abriu com um texto
+  // diferente do configurado — aí quem decide é um humano, nunca o robô
+  // (ver `registrarAlertaCategoria`).
+  let opcoesConhecidas: Set<string> | null = null;
+
   while (!sinal?.parar) {
     const operacao = controle.obterOperacao();
     if (operacao.status === 'RODANDO') {
@@ -60,6 +75,21 @@ export async function verificarAbertura(
         });
         return;
       }
+
+      if (opcoesConhecidas === null) {
+        opcoesConhecidas = new Set(resultado.opcoesAtuais);
+      } else {
+        const novas = resultado.opcoesAtuais.filter((op) => !opcoesConhecidas!.has(op));
+        if (novas.length > 0) {
+          controle.registrarAlertaCategoria(novas);
+          logger.error(
+            'opções novas apareceram no dropdown de objeto da petição, mas nenhuma bate com o texto configurado — decisão humana necessária, o robô não escolhe sozinho',
+            { textoObjeto, opcoesNovas: novas },
+          );
+          for (const nova of novas) opcoesConhecidas.add(nova);
+        }
+      }
+
       logger.info('verificador de abertura: objeto ainda não disponível', {
         textoObjeto,
         opcoesAtuais: resultado.opcoesAtuais,

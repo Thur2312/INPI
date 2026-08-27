@@ -6,7 +6,7 @@
 
 - [x] Chromium do Playwright instalado (`npx playwright install --with-deps chromium`, se ainda não tiver rodado numa máquina nova).
 - [x] `.env` com `INPI_USUARIO`/`INPI_SENHA` reais configurado.
-- [ ] `DASHBOARD_SENHA` definida no `.env` (mín. 8 caracteres) — sem isso o painel fica sem autenticação própria.
+- [x] `DASHBOARD_SENHA` definida no `.env` (mín. 8 caracteres) — sem isso o painel fica sem autenticação própria.
 
 ## 2. Dados de teste (planilha)
 

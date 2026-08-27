@@ -30,6 +30,8 @@ interface Cenario {
   linkBoletoRelativo: string;
   rotaGerar: string;
   rotaFinalizada: string;
+  /** Ver comentário em `AdapterInpi.aguardarCampoProcessoComRetry` e na fixture `gru.html`. */
+  tentativasRevelarProcesso?: number;
 }
 
 const cenarioPadrao: Cenario = {
@@ -167,6 +169,17 @@ describe('emitirGru — caminho feliz', () => {
     // 'TPH' é a 1ª opção do dropdown no cenário padrão — value é o índice (1-based) que o fixture atribui.
     expect(resultado.objetoPeticaoValue).toBe('1');
   });
+});
+
+describe('emitirGru — instabilidade do campo "Processo administrativo"', () => {
+  it('refaz a seleção do serviço 3020 e segue em frente quando a revelação do campo demora além da 1ª tentativa', async () => {
+    const { adapter, cenario } = await criarAdapter({ tentativasRevelarProcesso: 2 });
+    await adapter.login(cenario.usuarioValido, cenario.senhaValida);
+
+    const resultado = await adapter.emitirGru(dadosEmissaoPadrao);
+
+    expect(resultado.modo).toBe('emitida');
+  }, 35_000);
 });
 
 describe('emitirGru — os três detalhes do fluxo real', () => {

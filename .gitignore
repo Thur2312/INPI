@@ -4,3 +4,8 @@ data/
 output/
 .env
 *.log
+
+# Planilhas de teste com CPF/CNPJ real de cliente — nunca versionar.
+docs/*.xlsx
+
+.commit-message.txt

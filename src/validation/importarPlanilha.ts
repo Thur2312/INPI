@@ -34,16 +34,12 @@ export async function importarPlanilha(caminho: string): Promise<ResultadoImport
     await workbook.xlsx.readFile(caminho);
   }
 
-  const worksheet = workbook.worksheets[0];
-  if (!worksheet) {
+  if (workbook.worksheets.length === 0) {
     throw new Error(`Planilha "${caminho}" não contém nenhuma aba.`);
   }
 
-  const cabecalho: string[] = [];
-  const primeiraLinha = worksheet.getRow(1);
-  primeiraLinha.eachCell({ includeEmpty: false }, (cell, colNumero) => {
-    cabecalho[colNumero - 1] = valorParaTexto(celulaParaValor(cell.value)).trim();
-  });
+  const worksheet = encontrarWorksheetDeDados(workbook);
+  const cabecalho = lerCabecalho(worksheet);
 
   const linhas: LinhaImportada[] = [];
   const erros: ErroImportacao[] = [];
@@ -73,6 +69,38 @@ export async function importarPlanilha(caminho: string): Promise<ResultadoImport
   }
 
   return { linhas, erros };
+}
+
+/**
+ * Colunas cuja presença no cabeçalho identifica a aba de dados de verdade
+ * — ver `linhaPlanilhaSchema`. Não bastava pegar sempre `worksheets[0]`:
+ * o modelo distribuído pro cliente (ver `docs/`) tem uma aba de
+ * "Instruções" antes da aba com os dados, e o nome dessa 2ª aba não é
+ * garantido (ex.: "Processos"), então a checagem é pelo cabeçalho, não
+ * pelo nome. Cai para `worksheets[0]` se nenhuma aba bater — mantém
+ * compatível com planilhas de uma aba só (CSV é sempre isso) e com
+ * arquivos que, por engano, não têm nenhuma coluna reconhecida (o erro
+ * de "campo obrigatório ausente" por linha já cobre esse caso depois).
+ */
+function encontrarWorksheetDeDados(workbook: ExcelJS.Workbook): ExcelJS.Worksheet {
+  const COLUNAS_IDENTIFICADORAS = ['titular_documento', 'numero_processo', 'objeto_peticao'];
+
+  for (const worksheet of workbook.worksheets) {
+    const cabecalho = lerCabecalho(worksheet);
+    if (COLUNAS_IDENTIFICADORAS.every((coluna) => cabecalho.includes(coluna))) {
+      return worksheet;
+    }
+  }
+
+  return workbook.worksheets[0]!;
+}
+
+function lerCabecalho(worksheet: ExcelJS.Worksheet): string[] {
+  const cabecalho: string[] = [];
+  worksheet.getRow(1).eachCell({ includeEmpty: false }, (cell, colNumero) => {
+    cabecalho[colNumero - 1] = valorParaTexto(celulaParaValor(cell.value)).trim();
+  });
+  return cabecalho;
 }
 
 function celulaParaValor(valor: ExcelJS.CellValue): unknown {

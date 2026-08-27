@@ -386,16 +386,7 @@ export class AdapterInpi {
     await this.selecionarServico3020ComRetry();
     await this.pausaHumana();
 
-    // A seleção do serviço 3020 dispara, de forma assíncrona, tanto a
-    // revelação da seção do processo administrativo (escondida por
-    // padrão) quanto a chamada que popula o dropdown de objeto da
-    // petição. É genuinamente lento/instável do lado do INPI — às vezes
-    // ~1s, às vezes bem mais — mas resolve sozinho: reclicar no widget no
-    // meio da espera reinicia essa cadeia e piora o problema em vez de
-    // resolver (confirmado contra o sistema real em 27/08/2026, ver
-    // comentário em `selecionarServico3020ComRetry`). Por isso aqui é uma
-    // espera paciente, sem repetir a interação.
-    await this.page.waitForSelector(SERVICO.processo, { state: 'visible', timeout: 30_000 });
+    await this.aguardarCampoProcessoComRetry();
     await this.page.fill(SERVICO.processo, numeroProcesso);
     await this.pausaHumana();
     return this.aguardarOpcoesObjeto();
@@ -471,6 +462,42 @@ export class AdapterInpi {
       }
       if (tentativa < MAX_TENTATIVAS) {
         await this.page.waitForTimeout(500);
+      }
+    }
+  }
+
+  /**
+   * Espera o campo "Processo administrativo" ficar visível depois da
+   * seleção do serviço 3020 — a seleção dispara, de forma assíncrona,
+   * tanto a revelação dessa seção (escondida por padrão) quanto a chamada
+   * que popula o dropdown de objeto da petição. É genuinamente
+   * lento/instável do lado do INPI — às vezes ~1s, às vezes bem mais, e
+   * às vezes a revelação simplesmente não acontece (corrida no JS do
+   * INPI, sem diferença observável do lado do Playwright).
+   *
+   * Cada tentativa espera pacientemente, sem reclicar nada — reclicar o
+   * widget NO MEIO da espera reinicia a cadeia e piora o problema em vez
+   * de resolver (confirmado contra o sistema real em 27/08/2026, ver
+   * `selecionarServico3020ComRetry`). Só depois que uma tentativa esgota
+   * de vez (a cadeia não ia mesmo completar sozinha) é que refaz a
+   * seleção do serviço do zero, o que é uma interação nova, não uma
+   * repetição no meio de uma pendente.
+   */
+  private async aguardarCampoProcessoComRetry(): Promise<void> {
+    const MAX_TENTATIVAS = 4;
+    const TIMEOUT_POR_TENTATIVA_MS = 8_000;
+
+    for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa += 1) {
+      try {
+        await this.page.waitForSelector(SERVICO.processo, {
+          state: 'visible',
+          timeout: TIMEOUT_POR_TENTATIVA_MS,
+        });
+        return;
+      } catch (erro) {
+        if (tentativa === MAX_TENTATIVAS) throw erro;
+        await this.selecionarServico3020ComRetry();
+        await this.pausaHumana();
       }
     }
   }

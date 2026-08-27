@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import type { Browser, BrowserContext } from 'playwright';
 import { LARGADA_WORKER_MAX_MS, LARGADA_WORKER_MIN_MS } from '../config/constants.js';
-import { liberarOperacao, obterOperacao } from '../db/operacao.js';
+import { liberarOperacao, obterOperacao, registrarAlertaCategoria } from '../db/operacao.js';
 import { varrerOrfaos } from '../db/queue.js';
 import { AdapterInpi } from '../inpi/adapter.js';
 import { gerarRelatorios } from '../reports/relatorio.js';
@@ -133,6 +133,9 @@ export function rodarOperacao(opcoes: OpcoesOperacao): OperacaoEmAndamento {
             obterOperacao: () => obterOperacao(db),
             liberarOperacao: (value) => {
               liberarOperacao(db, value);
+            },
+            registrarAlertaCategoria: (opcoesNovas) => {
+              registrarAlertaCategoria(db, opcoesNovas);
             },
           },
           objetoPeticaoTexto,

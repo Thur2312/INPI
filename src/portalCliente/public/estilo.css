@@ -1,0 +1,377 @@
+/*
+ * Identidade visual definida em 27/08/2026 a partir de um site de
+ * referência que o Thulio indicou (vinho escuro + dourado, Montserrat,
+ * botões em pílula, eyebrows em caixa alta). Cores extraídas direto do
+ * CSS computado da página de referência, não estimadas visualmente.
+ */
+:root {
+  --vinho: #2b0a15;
+  --vinho-suave: #3d1322;
+  --creme: #f3ead9;
+  --dourado: #c9a26b;
+  --dourado-claro: #e6c98d;
+
+  --fundo: #f6f1e6;
+  --superficie: #ffffff;
+  --texto: #2b1810;
+  --texto-suave: rgba(43, 24, 16, 0.62);
+  --linha: rgba(43, 24, 16, 0.12);
+  --linha-dourada: rgba(201, 162, 107, 0.4);
+
+  --sucesso: #5f7d46;
+  --sucesso-fundo: #eaf1e2;
+  --alerta: #b5720a;
+  --alerta-fundo: #fbf1de;
+  --erro: #b3503f;
+  --erro-fundo: #fbeae6;
+  --neutro-fundo: #efe7d8;
+  --neutro-texto: #6f6047;
+
+  --sans: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--texto);
+  background: var(--fundo);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.oculto {
+  display: none !important;
+}
+
+.rotulo-eyebrow {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--dourado);
+}
+
+/* --- topo --- */
+
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 28px;
+  background: var(--vinho);
+  color: var(--creme);
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.marca-logo {
+  height: 30px;
+  width: auto;
+  display: block;
+}
+
+.marca-separador {
+  width: 1px;
+  height: 22px;
+  background: rgba(243, 234, 217, 0.22);
+}
+
+.marca-produto {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--creme);
+  opacity: 0.85;
+}
+
+/* --- botões --- */
+
+.botao {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 12px 26px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.botao--primario {
+  background: var(--dourado);
+  color: var(--vinho);
+}
+
+.botao--primario:hover {
+  background: var(--dourado-claro);
+}
+
+.botao--primario:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.botao--fantasma {
+  background: transparent;
+  border-color: rgba(243, 234, 217, 0.28);
+  color: var(--creme);
+  padding: 8px 18px;
+  font-size: 13px;
+}
+
+.botao--fantasma:hover {
+  border-color: var(--dourado);
+  color: var(--dourado-claro);
+}
+
+.botao--secundario {
+  background: transparent;
+  border-color: var(--linha-dourada);
+  color: var(--vinho);
+  padding: 9px 18px;
+  font-size: 13px;
+}
+
+.botao--secundario:hover {
+  border-color: var(--dourado);
+  background: var(--alerta-fundo);
+}
+
+/* --- tela de login --- */
+
+main {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 66px);
+}
+
+.tela-login {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  padding: 32px 20px 80px;
+}
+
+.logo-login {
+  width: min(260px, 70vw);
+  height: auto;
+}
+
+.cartao-login {
+  width: 100%;
+  max-width: 400px;
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: 20px;
+  padding: 36px 32px;
+  box-shadow: 0 24px 48px -32px rgba(43, 10, 21, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cartao-login h1 {
+  margin: 6px 0 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cartao-login .ajuda {
+  margin: 8px 0 22px;
+  color: var(--texto-suave);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.cartao-login label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-suave);
+  margin-bottom: 6px;
+}
+
+.cartao-login input {
+  width: 100%;
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+  padding: 13px 15px;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--texto);
+  background: var(--fundo);
+  margin-bottom: 22px;
+}
+
+.cartao-login input:focus {
+  outline: none;
+  border-color: var(--dourado);
+  background: var(--superficie);
+}
+
+.cartao-login .botao {
+  width: 100%;
+}
+
+.erro-login {
+  margin-top: 16px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--erro-fundo);
+  color: var(--erro);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* --- lista de processos --- */
+
+.tela-lista {
+  flex: 1;
+  padding: 36px 28px 60px;
+  max-width: 880px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.cabecalho-lista {
+  margin-bottom: 26px;
+}
+
+.cabecalho-lista h1 {
+  margin: 6px 0 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.lista-processos {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.processo-cartao {
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-left: 4px solid var(--dourado);
+  border-radius: 14px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.processo-cartao--erro {
+  border-left-color: var(--erro);
+}
+
+.processo-cartao--sucesso {
+  border-left-color: var(--sucesso);
+}
+
+.processo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.processo-numero {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  color: var(--texto-suave);
+  letter-spacing: 0.02em;
+}
+
+.processo-objeto {
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.processo-meta {
+  font-size: 12.5px;
+  color: var(--texto-suave);
+}
+
+.pilula {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pilula--sucesso {
+  background: var(--sucesso-fundo);
+  color: var(--sucesso);
+}
+.pilula--alerta {
+  background: var(--alerta-fundo);
+  color: var(--alerta);
+}
+.pilula--erro {
+  background: var(--erro-fundo);
+  color: var(--erro);
+}
+.pilula--neutro {
+  background: var(--neutro-fundo);
+  color: var(--neutro-texto);
+}
+
+.processo-acao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.processo-valor {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.sem-guia {
+  font-size: 12.5px;
+  color: var(--texto-suave);
+  font-style: italic;
+}
+
+.estado-vazio {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--texto-suave);
+}
+
+@media (max-width: 560px) {
+  .processo-cartao {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .processo-acao {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
