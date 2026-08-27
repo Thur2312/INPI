@@ -266,6 +266,34 @@ export function obterObjetoPeticaoPrincipal(
   };
 }
 
+/** Usado pelo portal do cliente — só os processos daquele CPF/CNPJ (já normalizado, só dígitos), nunca a fila inteira. */
+export function listarProcessosPorTitularDocumento(
+  db: Database.Database,
+  titularDocumento: string,
+): Processo[] {
+  const rows = db
+    .prepare('SELECT * FROM processos WHERE titular_documento = ? ORDER BY criado_em DESC')
+    .all(titularDocumento) as LinhaProcessoRow[];
+  return rows.map(paraDominio);
+}
+
+/**
+ * Busca um processo por id *e* confere o titular — usada para autorizar o
+ * download do PDF no portal do cliente. Nunca aceitar um id sem essa
+ * checagem: um cliente autenticado por CNPJ poderia trocar o id na URL e
+ * baixar o boleto de outro titular.
+ */
+export function buscarProcessoPorIdETitular(
+  db: Database.Database,
+  id: number,
+  titularDocumento: string,
+): Processo | undefined {
+  const row = db
+    .prepare('SELECT * FROM processos WHERE id = ? AND titular_documento = ?')
+    .get(id, titularDocumento) as LinhaProcessoRow | undefined;
+  return row ? paraDominio(row) : undefined;
+}
+
 export function existemProcessosPendentes(db: Database.Database): boolean {
   const row = db
     .prepare(

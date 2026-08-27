@@ -1,17 +1,17 @@
 import { randomUUID } from 'node:crypto';
-import { timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type Database from 'better-sqlite3';
-import express, { type Express, type NextFunction, type Request, type Response } from 'express';
+import express, { type Express } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import { obterOperacao, retomarOperacao } from '../db/operacao.js';
 import { contarPorStatus, listarTodosProcessos } from '../db/processos.js';
 import { gerarCsvString, gerarWorkbook } from '../reports/relatorio.js';
+import { criarMiddlewareBasicAuth } from '../utils/basicAuth.js';
 import type { Logger } from '../utils/logger.js';
 import { importarPlanilhaParaBanco } from '../validation/importarParaBanco.js';
 import type { GerenciadorOperacao } from './gerenciadorOperacao.js';
@@ -98,36 +98,6 @@ function paraOverridesEnv(overrides: z.infer<typeof overridesOperacaoSchema>): R
   return resultado;
 }
 
-function comparacaoSegura(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
-}
-
-/** HTTP Basic Auth simples — usuário é ignorado, só a senha importa. `senha` undefined desliga a checagem inteira (ver `CriarAppOpcoes.senha`). */
-function autenticar(senha: string | undefined) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!senha) {
-      next();
-      return;
-    }
-
-    const cabecalho = req.headers.authorization;
-    if (cabecalho?.startsWith('Basic ')) {
-      const decodificado = Buffer.from(cabecalho.slice('Basic '.length), 'base64').toString('utf-8');
-      const senhaRecebida = decodificado.slice(decodificado.indexOf(':') + 1);
-      if (comparacaoSegura(senhaRecebida, senha)) {
-        next();
-        return;
-      }
-    }
-
-    res.setHeader('WWW-Authenticate', 'Basic realm="GRU 3020"');
-    res.status(401).json({ erro: 'autenticação necessária' });
-  };
-}
-
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 /**
@@ -139,7 +109,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
  */
 export function criarApp(db: Database.Database, opcoes: CriarAppOpcoes): Express {
   const app = express();
-  app.use(autenticar(opcoes.senha));
+  app.use(criarMiddlewareBasicAuth(opcoes.senha, 'GRU 3020'));
 
   app.get('/api/status', (_req, res) => {
     res.json({

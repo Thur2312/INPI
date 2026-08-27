@@ -13,6 +13,20 @@ import {
 const horaSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'formato esperado HH:MM');
 
 /**
+ * Campo de segredo opcional (`DASHBOARD_SENHA`, `PORTAL_CLIENTE_*`) que
+ * trata string vazia como "não configurado" — sem isso, `CAMPO=` vazio no
+ * `.env` (exatamente o que `.env.example` deixa como placeholder) vira um
+ * erro de validação confuso ("deve ter pelo menos N caracteres") em vez de
+ * cair no comportamento de "ausente" que o resto do sistema já espera.
+ */
+function segredoOpcional(tamanhoMinimo: number, mensagem: string) {
+  return z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().min(tamanhoMinimo, mensagem).optional(),
+  );
+}
+
+/**
  * `MAX_WORKERS` some acima de 4 (o valor com que o sistema foi operado e
  * testado — largada escalonada + ritmo humano no INPI). Nada aqui impede
  * escalar mais: o teto de 20 é só um limite de sanidade contra erro de
@@ -90,7 +104,25 @@ const envSchema = z
      * automação e recebe planilha com CPF/CNPJ, configure sempre (ver aviso
      * em `dashboard/main.ts` quando ausente).
      */
-    DASHBOARD_SENHA: z.string().min(8, 'DASHBOARD_SENHA deve ter pelo menos 8 caracteres').optional(),
+    DASHBOARD_SENHA: segredoOpcional(8, 'DASHBOARD_SENHA deve ter pelo menos 8 caracteres'),
+
+    /**
+     * Backend separado (`src/portalCliente`) onde o cliente final acompanha
+     * e baixa os boletos GRU dos próprios requerimentos, autenticado só
+     * pelo CNPJ/CPF. `PORTAL_CLIENTE_TOKEN_SEGREDO` assina a sessão emitida
+     * no login — sem ele configurado, `portalCliente/main.ts` recusa subir
+     * (é a única coisa que impede alguém de forjar uma sessão para
+     * qualquer CNPJ, então não tem default seguro).
+     */
+    PORTAL_CLIENTE_PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+    PORTAL_CLIENTE_TOKEN_SEGREDO: segredoOpcional(
+      32,
+      'PORTAL_CLIENTE_TOKEN_SEGREDO deve ter pelo menos 32 caracteres',
+    ),
+    PORTAL_CLIENTE_ADMIN_SENHA: segredoOpcional(
+      8,
+      'PORTAL_CLIENTE_ADMIN_SENHA deve ter pelo menos 8 caracteres',
+    ),
 
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   })

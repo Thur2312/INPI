@@ -17,7 +17,8 @@
     "migrate": "tsx src/db/migrate.ts",
     "importar": "tsx src/validation/main.ts",
     "operar": "tsx src/orchestrator/main.ts",
-    "dashboard": "tsx src/dashboard/main.ts"
+    "dashboard": "tsx src/dashboard/main.ts",
+    "portal-cliente": "tsx src/portalCliente/main.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.9.1",
