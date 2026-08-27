@@ -238,7 +238,12 @@ export function marcarComoDefinitivo(
  */
 export function obterObjetoPeticaoPrincipal(
   db: Database.Database,
-): { texto: string; valoresDistintos: string[] } | null {
+): {
+  texto: string;
+  valoresDistintos: string[];
+  titularDocumento: string;
+  numeroProcesso: string;
+} | null {
   const rows = db
     .prepare(
       `SELECT DISTINCT objeto_peticao FROM processos WHERE status = 'AGUARDANDO_ABERTURA' ORDER BY objeto_peticao`,
@@ -249,13 +254,15 @@ export function obterObjetoPeticaoPrincipal(
 
   const primeiro = db
     .prepare(
-      `SELECT objeto_peticao FROM processos WHERE status = 'AGUARDANDO_ABERTURA' ORDER BY posicao ASC LIMIT 1`,
+      `SELECT objeto_peticao, titular_documento, numero_processo FROM processos WHERE status = 'AGUARDANDO_ABERTURA' ORDER BY posicao ASC LIMIT 1`,
     )
-    .get() as { objeto_peticao: string };
+    .get() as { objeto_peticao: string; titular_documento: string; numero_processo: string };
 
   return {
     texto: primeiro.objeto_peticao,
     valoresDistintos: rows.map((r) => r.objeto_peticao),
+    titularDocumento: primeiro.titular_documento,
+    numeroProcesso: primeiro.numero_processo,
   };
 }
 

@@ -15,6 +15,8 @@ describe('verificarAbertura', () => {
       { objetoPeticaoDisponivel },
       { obterOperacao: () => ({ status: 'RODANDO' }), liberarOperacao },
       'TPH',
+      '11144477735',
+      '940328100',
       { logger: criarLoggerFalso() },
     );
 
@@ -39,6 +41,8 @@ describe('verificarAbertura', () => {
       { objetoPeticaoDisponivel },
       { obterOperacao: () => ({ status }), liberarOperacao },
       'Plataforma de Mercado Virtual',
+      '11144477735',
+      '940328100',
       { logger: criarLoggerFalso(), intervaloMinMs: 1, intervaloMaxMs: 2 },
     );
 
@@ -59,6 +63,8 @@ describe('verificarAbertura', () => {
       { objetoPeticaoDisponivel },
       { obterOperacao: () => ({ status: 'AGUARDANDO_ABERTURA' }), liberarOperacao },
       'TPH',
+      '11144477735',
+      '940328100',
       { logger, intervaloMinMs: 1, intervaloMaxMs: 2 },
     );
 
@@ -82,6 +88,8 @@ describe('verificarAbertura', () => {
       { objetoPeticaoDisponivel },
       { obterOperacao: () => ({ status: 'AGUARDANDO_ABERTURA' }), liberarOperacao },
       'TPH',
+      '11144477735',
+      '940328100',
       { logger: criarLoggerFalso(), intervaloMinMs: 1, intervaloMaxMs: 2, sinal },
     );
 

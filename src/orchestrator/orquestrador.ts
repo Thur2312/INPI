@@ -25,6 +25,9 @@ export interface OpcoesOperacao {
   credenciais: CredenciaisInpi;
   maxWorkers: number;
   objetoPeticaoTexto: string;
+  /** CPF/CNPJ e número de processo de um requerimento real já na fila, usados pelo verificador de abertura para checar o dropdown de objeto (ver `AdapterInpi.objetoPeticaoDisponivel`). */
+  titularDocumentoVerificador: string;
+  numeroProcessoVerificador: string;
   config: ConfigWorker;
   logger: Logger;
   pastaBackup: string;
@@ -73,6 +76,8 @@ export function rodarOperacao(opcoes: OpcoesOperacao): OperacaoEmAndamento {
     credenciais,
     maxWorkers,
     objetoPeticaoTexto,
+    titularDocumentoVerificador,
+    numeroProcessoVerificador,
     config,
     logger,
     pastaBackup,
@@ -131,6 +136,8 @@ export function rodarOperacao(opcoes: OpcoesOperacao): OperacaoEmAndamento {
             },
           },
           objetoPeticaoTexto,
+          titularDocumentoVerificador,
+          numeroProcessoVerificador,
           {
             logger,
             sinal,

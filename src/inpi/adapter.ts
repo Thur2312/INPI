@@ -1,7 +1,12 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { BrowserContext, Page } from 'playwright';
-import { CODIGO_SERVICO_3020, TIPO_SERVICO_MARCAS_VALUE } from '../config/constants.js';
+import {
+  CODIGO_SERVICO_3020,
+  PAUSA_ENTRE_PASSOS_FORMULARIO_MAX_MS,
+  PAUSA_ENTRE_PASSOS_FORMULARIO_MIN_MS,
+  TIPO_SERVICO_MARCAS_VALUE,
+} from '../config/constants.js';
 import {
   CaptchaDetectadoError,
   ClienteAmbiguoError,
@@ -12,6 +17,7 @@ import {
   SessaoInpiError,
   ValorInesperadoError,
 } from './erros.js';
+import { pausaAleatoria } from '../utils/sleep.js';
 import {
   BASE,
   CAPTCHA_SELETORES,
@@ -138,29 +144,33 @@ export class AdapterInpi {
    * faz o polling, não cada worker, exatamente para não gerar 4 workers
    * batendo no INPI em loop ao mesmo tempo.
    *
-   * Assume que o dropdown de objeto é populado a partir do tipo de
-   * serviço (Marcas/3020) selecionado, independente de cliente —
-   * confirmado contra o sistema real via --dry-run em 25/08/2026.
+   * Precisa de um cliente e de um número de processo reais (de algum
+   * requerimento já na fila) para checar de verdade: sem cliente
+   * selecionado o INPI nem populava a lista de serviços (retorna um erro
+   * — "Favor informar o Cliente...", nunca a lista real), e o dropdown de
+   * objeto só existe depois do processo administrativo preenchido (ver
+   * `selecionarTipoEServicoObtendoOpcoesObjeto`). A suposição anterior —
+   * "independente de cliente" — estava errada e fazia esta checagem
+   * nunca funcionar de verdade, travando o verificador de abertura para
+   * sempre (corrigido em 27/08/2026, às vésperas da cota de "plataforma
+   * de mercado virtual" abrir em 01/09/2026).
    */
   async objetoPeticaoDisponivel(
     textoBuscado: string,
+    titularDocumento: string,
+    numeroProcesso: string,
   ): Promise<{ encontrado: boolean; value: string | null; opcoesAtuais: readonly string[] }> {
     if (this.page.url().startsWith(ROTAS.gerar)) {
       await this.page.reload();
     } else {
       await this.page.goto(ROTAS.gerar);
     }
-    await this.page.selectOption(SERVICO.tipo, TIPO_SERVICO_MARCAS_VALUE);
-    await this.page.waitForSelector(`${SERVICO.codigo} option[value="${CODIGO_SERVICO_3020}"]`, {
-      state: 'attached',
-    });
-    await this.selecionarServico3020ComRetry();
 
-    const opcoes = this.page.locator(`${SERVICO.objeto} option`);
-    const textos = await opcoes.allTextContents();
-    const values = await opcoes.evaluateAll((elementos) =>
-      elementos.map((el) => (el as unknown as { value: string }).value),
-    );
+    await this.selecionarCliente(titularDocumento);
+    const textos = await this.selecionarTipoEServicoObtendoOpcoesObjeto(numeroProcesso);
+    const values = await this.page
+      .locator(`${SERVICO.objeto} option`)
+      .evaluateAll((elementos) => elementos.map((el) => (el as unknown as { value: string }).value));
 
     const regex = new RegExp(escapeRegExp(textoBuscado), 'i');
     const indice = textos.findIndex((texto) => regex.test(texto));
@@ -232,7 +242,9 @@ export class AdapterInpi {
     }
 
     await this.selecionarCliente(dados.titularDocumento);
+    await this.pausaHumana();
     const objetoPeticaoValue = await this.preencherServico(dados);
+    await this.pausaHumana();
     await this.page.click(SERVICO.confirmar);
     // Mesmo raciocínio de `selecionarCliente`: a tela de conferência é
     // montada de forma assíncrona (mesma URL, sem navegação) — espera a
@@ -335,7 +347,31 @@ export class AdapterInpi {
    * no dia da operação se o INPI trocar o value sem avisar.
    */
   private async preencherServico(dados: DadosEmissaoGru): Promise<string> {
-    await this.page.selectOption(SERVICO.tipo, TIPO_SERVICO_MARCAS_VALUE);
+    const opcoes = await this.selecionarTipoEServicoObtendoOpcoesObjeto(dados.numeroProcesso);
+
+    const regex = new RegExp(escapeRegExp(dados.objetoPeticaoTexto), 'i');
+    const opcaoEncontrada = opcoes.find((texto) => regex.test(texto));
+
+    if (!opcaoEncontrada) {
+      throw new ObjetoPeticaoIndisponivelError(dados.objetoPeticaoTexto, opcoes);
+    }
+
+    await this.page.selectOption(SERVICO.objeto, { label: opcaoEncontrada });
+    return this.page.locator(SERVICO.objeto).inputValue();
+  }
+
+  /**
+   * Seleciona Tipo de Serviço (Marcas) → Serviço (3020) → preenche o
+   * processo administrativo e devolve as opções do dropdown de objeto da
+   * petição resultante. Compartilhado por `preencherServico` (emissão
+   * real) e `objetoPeticaoDisponivel` (verificador de abertura) — ambos
+   * precisam exatamente da mesma sequência para o INPI popular o
+   * dropdown de objeto de verdade. Pressupõe que um cliente já foi
+   * selecionado antes (`selecionarCliente`).
+   */
+  private async selecionarTipoEServicoObtendoOpcoesObjeto(numeroProcesso: string): Promise<string[]> {
+    await this.selecionarTipoServicoMarcasComRetry();
+    await this.pausaHumana();
     // Espera o <option> do serviço 3020 existir de verdade antes de
     // selecioná-lo — sem isso, `selecionarServico3020ComRetry` pode
     // disparar o change contra um <select> ainda sendo populado pelo AJAX
@@ -347,42 +383,72 @@ export class AdapterInpi {
       state: 'attached',
     });
 
-    const opcoes = await this.selecionarServico3020ComRetry();
-    const regex = new RegExp(escapeRegExp(dados.objetoPeticaoTexto), 'i');
-    const opcaoEncontrada = opcoes.find((texto) => regex.test(texto));
+    await this.selecionarServico3020ComRetry();
+    await this.pausaHumana();
 
-    if (!opcaoEncontrada) {
-      throw new ObjetoPeticaoIndisponivelError(dados.objetoPeticaoTexto, opcoes);
-    }
-
-    await this.page.selectOption(SERVICO.objeto, { label: opcaoEncontrada });
-    await this.page.fill(SERVICO.processo, dados.numeroProcesso);
-    return this.page.locator(SERVICO.objeto).inputValue();
+    // A seleção do serviço 3020 dispara, de forma assíncrona, tanto a
+    // revelação da seção do processo administrativo (escondida por
+    // padrão) quanto a chamada que popula o dropdown de objeto da
+    // petição. É genuinamente lento/instável do lado do INPI — às vezes
+    // ~1s, às vezes bem mais — mas resolve sozinho: reclicar no widget no
+    // meio da espera reinicia essa cadeia e piora o problema em vez de
+    // resolver (confirmado contra o sistema real em 27/08/2026, ver
+    // comentário em `selecionarServico3020ComRetry`). Por isso aqui é uma
+    // espera paciente, sem repetir a interação.
+    await this.page.waitForSelector(SERVICO.processo, { state: 'visible', timeout: 30_000 });
+    await this.page.fill(SERVICO.processo, numeroProcesso);
+    await this.pausaHumana();
+    return this.aguardarOpcoesObjeto();
   }
 
   /**
-   * Seleciona o serviço 3020 e devolve as opções do dropdown de objeto da
-   * petição que essa seleção popula.
+   * Seleciona "Marcas" em Tipo de Serviço e confirma que o valor realmente
+   * ficou marcado antes de seguir — `page.selectOption` normalmente é
+   * confiável num `<select>` nativo (não é select2), mas como o resto
+   * desse fluxo depende inteiramente dessa seleção ter disparado o AJAX
+   * que popula `SERVICO.codigo`, mais vale checar e repetir do que deixar
+   * o restante do fluxo esperar por algo que nunca vai aparecer.
+   */
+  private async selecionarTipoServicoMarcasComRetry(): Promise<void> {
+    const MAX_TENTATIVAS = 3;
+
+    for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa += 1) {
+      await this.page.selectOption(SERVICO.tipo, TIPO_SERVICO_MARCAS_VALUE);
+
+      if ((await this.page.locator(SERVICO.tipo).inputValue()) === TIPO_SERVICO_MARCAS_VALUE) {
+        return;
+      }
+      if (tentativa < MAX_TENTATIVAS) {
+        await this.page.waitForTimeout(500);
+      }
+    }
+  }
+
+  /**
+   * Seleciona o serviço 3020 no widget select2.
    *
    * `#select-servico` (`SERVICO.codigo`) é escondido pelo select2 — usar
    * `page.selectOption` direto nele (com `force`, senão o Playwright
-   * espera uma visibilidade que nunca vem) chega a marcar o valor certo,
-   * mas o handler do INPI que popula `SERVICO.objeto` fica vazio: ele
-   * depende de algo do próprio fluxo de seleção do widget select2, não só
-   * do evento `change` final no `<select>` nativo (confirmado em teste
-   * manual contra o site real — `force` nunca populou o objeto, um clique
-   * de verdade no widget populou). Por isso aqui é clique real: abre o
-   * widget, filtra pelo código no campo de busca (a classe "autocomplete"
-   * do `<select>` original liga essa busca) e clica no resultado.
+   * espera uma visibilidade que nunca vem) marca o valor no `<select>`
+   * nativo, mas sem passar pelo fluxo de clique do widget o restante da
+   * tela (que lê o widget, não o `<select>`) não reflete a seleção
+   * (confirmado em teste manual contra o site real). Por isso aqui é
+   * clique real: abre o widget, filtra pelo código no campo de busca (a
+   * classe "autocomplete" do `<select>` original liga essa busca) e clica
+   * no resultado.
    *
    * O motivo do retry: mesmo clicando de verdade, a mesma sequência às
-   * vezes dispara `GET .../pesquisar/servico/3020/diretoria/300` (correto,
-   * popula o objeto) e às vezes `.../diretoria/` com o código da diretoria
-   * vazio (404, objeto fica vazio) — sem diferença observável do lado do
-   * Playwright, aparenta ser uma corrida interna do JS do INPI. Repetir a
-   * interação dá outra chance de a corrida resolver a favor.
+   * vezes não deixa o valor `3020` de fato marcado em `SERVICO.codigo`
+   * (sem diferença observável do lado do Playwright, aparenta ser uma
+   * corrida interna do JS do INPI). Repetir a interação dá outra chance de
+   * a corrida resolver a favor. Só verifica o valor marcado — a revelação
+   * da seção do processo administrativo e a população do dropdown de
+   * objeto são conferidas depois, com espera paciente e sem reclicar (ver
+   * `preencherServico`): reclicar o widget enquanto essa cadeia
+   * assíncrona ainda está em andamento a reinicia e piora a demora em vez
+   * de resolver (confirmado contra o sistema real em 27/08/2026).
    */
-  private async selecionarServico3020ComRetry(): Promise<string[]> {
+  private async selecionarServico3020ComRetry(): Promise<void> {
     const MAX_TENTATIVAS = 3;
 
     for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa += 1) {
@@ -400,17 +466,41 @@ export class AdapterInpi {
         .click();
       await this.page.waitForLoadState('networkidle');
 
-      const opcoes = await this.page.locator(`${SERVICO.objeto} option`).allTextContents();
-      // "--Selecione--" sozinho = a corrida deu ruim e o objeto não populou.
-      if (opcoes.length > 1) {
-        return opcoes;
+      if ((await this.page.locator(SERVICO.codigo).inputValue()) === CODIGO_SERVICO_3020) {
+        return;
       }
       if (tentativa < MAX_TENTATIVAS) {
         await this.page.waitForTimeout(500);
       }
     }
+  }
 
-    return [];
+  /**
+   * Espera o dropdown de objeto da petição ganhar opções de verdade (além
+   * do "--Selecione--" inicial) depois que o processo administrativo é
+   * preenchido, e devolve os textos das opções. Não lança se o timeout
+   * estourar — devolve o que tiver (mesmo que só "--Selecione--"), e quem
+   * chama (`preencherServico`) já trata lista sem a opção buscada via
+   * `ObjetoPeticaoIndisponivelError`.
+   */
+  private async aguardarOpcoesObjeto(): Promise<string[]> {
+    const MAX_TENTATIVAS = 40;
+    const INTERVALO_MS = 500;
+
+    for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa += 1) {
+      const total = await this.page.locator(`${SERVICO.objeto} option`).count();
+      if (total > 1) {
+        break;
+      }
+      await this.page.waitForTimeout(INTERVALO_MS);
+    }
+
+    return this.page.locator(`${SERVICO.objeto} option`).allTextContents();
+  }
+
+  /** Ritmo humano entre os passos do formulário — ver `PAUSA_ENTRE_PASSOS_FORMULARIO_*`. */
+  private async pausaHumana(): Promise<void> {
+    await pausaAleatoria(PAUSA_ENTRE_PASSOS_FORMULARIO_MIN_MS, PAUSA_ENTRE_PASSOS_FORMULARIO_MAX_MS);
   }
 
   private async conferirValor(valorEsperado: number): Promise<string> {

@@ -86,6 +86,8 @@ async function main(): Promise<void> {
     credenciais: { usuario: env.INPI_USUARIO, senha: env.INPI_SENHA },
     maxWorkers: env.MAX_WORKERS,
     objetoPeticaoTexto: objetoInfo.texto,
+    titularDocumentoVerificador: objetoInfo.titularDocumento,
+    numeroProcessoVerificador: objetoInfo.numeroProcesso,
     config,
     logger,
     pastaBackup: join(dirname(env.DB_PATH), 'backups'),

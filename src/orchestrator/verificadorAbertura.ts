@@ -4,6 +4,8 @@ import { sleep } from '../utils/sleep.js';
 export interface VerificadorObjeto {
   objetoPeticaoDisponivel(
     textoBuscado: string,
+    titularDocumento: string,
+    numeroProcesso: string,
   ): Promise<{ encontrado: boolean; value: string | null; opcoesAtuais: readonly string[] }>;
 }
 
@@ -26,6 +28,9 @@ export async function verificarAbertura(
   verificador: VerificadorObjeto,
   controle: ControleOperacao,
   textoObjeto: string,
+  /** CPF/CNPJ e número de processo de um requerimento real já na fila — necessários porque o INPI só popula os dropdowns de serviço/objeto depois de um cliente selecionado e um processo preenchido (ver `AdapterInpi.objetoPeticaoDisponivel`). */
+  titularDocumento: string,
+  numeroProcesso: string,
   opcoes: {
     logger: Logger;
     intervaloMinMs?: number;
@@ -42,7 +47,11 @@ export async function verificarAbertura(
     }
 
     try {
-      const resultado = await verificador.objetoPeticaoDisponivel(textoObjeto);
+      const resultado = await verificador.objetoPeticaoDisponivel(
+        textoObjeto,
+        titularDocumento,
+        numeroProcesso,
+      );
       if (resultado.encontrado && resultado.value !== null) {
         controle.liberarOperacao(resultado.value);
         logger.info('cota liberada: objeto da petição encontrado no dropdown', {

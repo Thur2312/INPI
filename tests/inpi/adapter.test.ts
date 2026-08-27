@@ -246,7 +246,7 @@ describe('emitirGru — modo ensaio (--dry-run)', () => {
 
     expect(primeiro.modo).toBe('dry-run');
     expect(segundo.modo).toBe('dry-run');
-  });
+  }, 30_000);
 });
 
 describe('novoServico', () => {
@@ -260,7 +260,7 @@ describe('novoServico', () => {
     const [page] = context.pages();
     expect(page?.url()).toBe(ROTAS.gerar);
     expect(await page!.locator(CLIENTE.abrirBusca).isVisible()).toBe(true);
-  });
+  }, 20_000);
 });
 
 describe('capturarScreenshot', () => {

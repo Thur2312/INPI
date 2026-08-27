@@ -16,6 +16,21 @@ export const DIGITOS_NUMERO_PROCESSO = 9;
 export const PAUSA_ENTRE_ACOES_MIN_MS = 2000;
 export const PAUSA_ENTRE_ACOES_MAX_MS = 4000;
 
+/**
+ * Ritmo humano entre os passos do formulário de um único requerimento
+ * (cliente → tipo → serviço 3020 → processo → objeto → confirmar) —
+ * diferente de `PAUSA_ENTRE_ACOES_*`, que é o intervalo entre um
+ * requerimento e o próximo na fila. Ir rápido demais entre esses passos
+ * parece disparar corridas no JS do INPI (o campo de processo
+ * administrativo às vezes nunca revela, o dropdown de objeto às vezes não
+ * popula) — um teste manual levou ~10s do início até a tela de
+ * conferência e funcionou sem falhas; automatizado, sem nenhuma pausa
+ * entre passos, falha com frequência bem maior (confirmado contra o
+ * sistema real em 27/08/2026).
+ */
+export const PAUSA_ENTRE_PASSOS_FORMULARIO_MIN_MS = 1500;
+export const PAUSA_ENTRE_PASSOS_FORMULARIO_MAX_MS = 2500;
+
 /** Largada escalonada dos workers (spec: 10–15s entre um worker e o próximo). */
 export const LARGADA_WORKER_MIN_MS = 10_000;
 export const LARGADA_WORKER_MAX_MS = 15_000;

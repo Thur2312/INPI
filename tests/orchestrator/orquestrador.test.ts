@@ -106,6 +106,8 @@ function opcoesBase(overrides: Partial<OpcoesOperacao> = {}): OpcoesOperacao {
     credenciais,
     maxWorkers: 2,
     objetoPeticaoTexto: 'TPH',
+    titularDocumentoVerificador: '11144477735',
+    numeroProcessoVerificador: '900000001',
     config: configPadrao,
     logger: criarLoggerFalso(),
     pastaBackup: join(pastaTemp, 'backups'),
