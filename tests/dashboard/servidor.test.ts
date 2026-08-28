@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -55,13 +55,20 @@ const configPadrao = {
   verificadorIntervaloMaxMs: 30_000,
 };
 
-function inserirProcesso(posicao: number, status = 'AGUARDANDO_ABERTURA'): void {
-  db.prepare(
-    `
-    INSERT INTO processos (posicao, fila, titular_documento, numero_processo, objeto_peticao, status)
-    VALUES (@posicao, 'PRINCIPAL', '11144477735', @numero, 'TPH', @status)
+function inserirProcesso(
+  posicao: number,
+  status = 'AGUARDANDO_ABERTURA',
+  caminhoPdf: string | null = null,
+): number {
+  const info = db
+    .prepare(
+      `
+    INSERT INTO processos (posicao, fila, titular_documento, numero_processo, objeto_peticao, status, caminho_pdf)
+    VALUES (@posicao, 'PRINCIPAL', '11144477735', @numero, 'TPH', @status, @caminhoPdf)
   `,
-  ).run({ posicao, numero: `90000000${posicao}`, status });
+    )
+    .run({ posicao, numero: `90000000${posicao}`, status, caminhoPdf });
+  return Number(info.lastInsertRowid);
 }
 
 async function subirApp(opcoesExtra: Partial<CriarAppOpcoes> = {}): Promise<void> {
@@ -71,6 +78,7 @@ async function subirApp(opcoesExtra: Partial<CriarAppOpcoes> = {}): Promise<void
     configPadrao,
     logPath: join(pastaTemp, 'operacao-processo.log'),
     logger: criarLoggerFalso(),
+    raizProjeto: pastaTemp,
     ...opcoesExtra,
   });
   servidor = await new Promise<Server>((resolve) => {
@@ -122,6 +130,30 @@ describe('GET /api/config', () => {
     const resposta = await fetch(`${baseUrl}/api/config`);
     expect(resposta.status).toBe(200);
     expect(await resposta.json()).toEqual(configPadrao);
+  });
+});
+
+describe('GET /api/processos/:id/pdf', () => {
+  it('baixa o PDF quando o requerimento tem guia emitida', async () => {
+    mkdirSync(join(pastaTemp, 'output', 'guias'), { recursive: true });
+    writeFileSync(join(pastaTemp, 'output', 'guias', 'a.pdf'), '%PDF-FAKE-CONTENT');
+    const id = inserirProcesso(1, 'GRU_EMITIDA', 'output/guias/a.pdf');
+
+    const resposta = await fetch(`${baseUrl}/api/processos/${id}/pdf`);
+    expect(resposta.status).toBe(200);
+    expect(await resposta.text()).toBe('%PDF-FAKE-CONTENT');
+  });
+
+  it('devolve 404 quando o requerimento ainda não tem guia', async () => {
+    const id = inserirProcesso(1, 'AGUARDANDO_ABERTURA');
+
+    const resposta = await fetch(`${baseUrl}/api/processos/${id}/pdf`);
+    expect(resposta.status).toBe(404);
+  });
+
+  it('devolve 404 para um id que não existe', async () => {
+    const resposta = await fetch(`${baseUrl}/api/processos/99999/pdf`);
+    expect(resposta.status).toBe(404);
   });
 });
 
@@ -180,6 +212,28 @@ describe('POST /api/importar', () => {
 });
 
 describe('POST /api/iniciar e /api/parar', () => {
+  beforeEach(() => {
+    // A maioria dos testes aqui assume que já existe planilha válida
+    // importada — o teste específico da recusa por fila vazia cuida do
+    // caso sem nenhum processo.
+    inserirProcesso(1, 'AGUARDANDO_ABERTURA');
+  });
+
+  it('recusa com 409 quando nenhuma planilha válida foi importada (fila vazia)', async () => {
+    db.exec('DELETE FROM processos');
+
+    const resposta = await fetch(`${baseUrl}/api/iniciar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+
+    expect(resposta.status).toBe(409);
+    const corpo = (await resposta.json()) as { erro: string };
+    expect(corpo.erro).toContain('nenhuma planilha válida importada');
+    expect(gerenciadorFalso.chamadasIniciar).toEqual([]);
+  });
+
   it('inicia a operação e repassa os overrides como variáveis de ambiente', async () => {
     const resposta = await fetch(`${baseUrl}/api/iniciar`, {
       method: 'POST',

@@ -37,6 +37,7 @@ function main(): void {
   const app = criarApp(db, {
     gerenciadorOperacao,
     logger,
+    raizProjeto: RAIZ_PROJETO,
     logPath: join(env.OUTPUT_DIR, 'logs', 'operacao-processo.log'),
     ...(env.DASHBOARD_SENHA !== undefined && { senha: env.DASHBOARD_SENHA }),
     configPadrao: {

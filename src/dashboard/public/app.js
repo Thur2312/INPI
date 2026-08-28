@@ -16,6 +16,8 @@ const elUltimaAtualizacao = document.getElementById('ultima-atualizacao');
 
 const elFormImportar = document.getElementById('form-importar');
 const elCampoPlanilha = document.getElementById('campo-planilha');
+const elCampoArquivoTexto = document.getElementById('campo-arquivo-texto');
+const TEXTO_ARQUIVO_PADRAO = elCampoArquivoTexto.innerHTML;
 const elBtnImportar = document.getElementById('btn-importar');
 const elResultadoImportar = document.getElementById('resultado-importar');
 
@@ -29,6 +31,7 @@ const elCampoVerificadorMin = document.getElementById('campo-verificador-min');
 const elCampoVerificadorMax = document.getElementById('campo-verificador-max');
 const elBtnIniciar = document.getElementById('btn-iniciar');
 const elBtnParar = document.getElementById('btn-parar');
+const elAvisoSemPlanilha = document.getElementById('aviso-sem-planilha');
 const elResultadoIniciar = document.getElementById('resultado-iniciar');
 
 const elLogOperacao = document.getElementById('log-operacao');
@@ -73,7 +76,12 @@ function renderizarAlertaCategoria(operacao) {
     'nenhuma bate com o texto configurado. Confira se é a categoria certa antes de ajustar a configuração.';
 }
 
-function renderizarProcessoOperacao(processoOperacao) {
+/** Mesmo critério do backend (`existemProcessosPendentes`) — ver POST /api/iniciar em servidor.ts. */
+function existeFilaValida(contagens) {
+  return (contagens.AGUARDANDO_ABERTURA ?? 0) + (contagens.GRU_EM_PROCESSAMENTO ?? 0) > 0;
+}
+
+function renderizarProcessoOperacao(processoOperacao, contagens) {
   processoRodando = processoOperacao.rodando;
   if (processoOperacao.rodando) {
     elBadgeProcesso.textContent = `processo: rodando (pid ${processoOperacao.pid})`;
@@ -82,7 +90,10 @@ function renderizarProcessoOperacao(processoOperacao) {
     elBadgeProcesso.textContent = 'processo: parado';
     elBadgeProcesso.className = 'badge badge--processo-parado';
   }
-  elBtnIniciar.disabled = processoOperacao.rodando;
+
+  const temFilaValida = existeFilaValida(contagens);
+  elBtnIniciar.disabled = processoOperacao.rodando || !temFilaValida;
+  elAvisoSemPlanilha.classList.toggle('oculto', processoOperacao.rodando || temFilaValida);
   elBtnParar.classList.toggle('oculto', !processoOperacao.rodando);
   for (const campo of [
     elCampoMaxWorkers,
@@ -100,11 +111,11 @@ function renderizarProcessoOperacao(processoOperacao) {
 function renderizarMetricas(contagens, total) {
   const entradas = Object.entries(contagens).sort((a, b) => b[1] - a[1]);
   const blocos = [
-    `<div class="metrica"><span class="metrica-valor">${total}</span><span class="metrica-rotulo">Total</span></div>`,
-    ...entradas.map(
-      ([status, qtd]) =>
-        `<div class="metrica"><span class="metrica-valor">${qtd}</span><span class="metrica-rotulo">${formatarStatus(status)}</span></div>`,
-    ),
+    `<div class="metrica metrica--total"><span class="metrica-valor">${total}</span><span class="metrica-rotulo">Total</span></div>`,
+    ...entradas.map(([status, qtd]) => {
+      const classeCor = classePilulaStatus(status).replace('pilula-status--', 'metrica--');
+      return `<div class="metrica ${classeCor}"><span class="metrica-valor">${qtd}</span><span class="metrica-rotulo">${formatarStatus(status)}</span></div>`;
+    }),
   ];
   elMetricas.innerHTML = blocos.join('');
 }
@@ -160,13 +171,16 @@ function renderizarTabela(processos) {
 
   if (filtrados.length === 0) {
     elCorpoTabela.innerHTML =
-      '<tr><td colspan="10" class="linha-vazia">nenhum processo encontrado</td></tr>';
+      '<tr><td colspan="11" class="linha-vazia">nenhum processo encontrado</td></tr>';
     return;
   }
 
   elCorpoTabela.innerHTML = filtrados
     .map((p) => {
       const erro = p.erroMensagem ? `${p.erroTipo ?? ''}: ${p.erroMensagem}` : '';
+      const guia = p.caminhoPdf
+        ? `<a class="botao botao--guia" href="/api/processos/${p.id}/pdf">Baixar</a>`
+        : '<span class="sem-guia">—</span>';
       return `
         <tr>
           <td class="mono">${p.posicao}</td>
@@ -178,6 +192,7 @@ function renderizarTabela(processos) {
           <td class="mono">${p.tentativas}</td>
           <td class="mono">${escaparHtml(p.nossoNumero ?? '')}</td>
           <td class="mono">${escaparHtml(p.valorGru ?? '')}</td>
+          <td>${guia}</td>
           <td title="${escaparHtml(erro)}">${escaparHtml(erro)}</td>
         </tr>
       `;
@@ -199,7 +214,7 @@ async function atualizar() {
     const total = Object.values(payload.contagens).reduce((a, b) => a + b, 0);
     renderizarOperacao(payload.operacao);
     renderizarAlertaCategoria(payload.operacao);
-    renderizarProcessoOperacao(payload.processoOperacao);
+    renderizarProcessoOperacao(payload.processoOperacao, payload.contagens);
     renderizarMetricas(payload.contagens, total);
     atualizarOpcoesFiltro(payload.contagens);
     renderizarTabela(payload.processos);
@@ -260,6 +275,17 @@ async function carregarConfigPadrao() {
   }
 }
 
+elCampoPlanilha.addEventListener('change', () => {
+  const arquivo = elCampoPlanilha.files[0];
+  if (!arquivo) {
+    elCampoArquivoTexto.innerHTML = TEXTO_ARQUIVO_PADRAO;
+    elCampoArquivoTexto.classList.remove('campo-arquivo-texto--escolhido');
+    return;
+  }
+  elCampoArquivoTexto.textContent = arquivo.name;
+  elCampoArquivoTexto.classList.add('campo-arquivo-texto--escolhido');
+});
+
 elFormImportar.addEventListener('submit', async (evento) => {
   evento.preventDefault();
   const arquivo = elCampoPlanilha.files[0];
@@ -282,6 +308,8 @@ elFormImportar.addEventListener('submit', async (evento) => {
       `${corpo.validados} validada(s), ${corpo.pendenciaDados} pendência de dados, ` +
       `${corpo.pendenciaLimite} pendência de limite, ${corpo.errosDeFormato.length} rejeitada(s) no schema.`;
     elFormImportar.reset();
+    elCampoArquivoTexto.innerHTML = TEXTO_ARQUIVO_PADRAO;
+    elCampoArquivoTexto.classList.remove('campo-arquivo-texto--escolhido');
     await atualizar();
   } catch (erro) {
     elResultadoImportar.className = 'resultado-importar resultado-importar--erro';

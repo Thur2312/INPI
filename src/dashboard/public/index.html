@@ -3,14 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GRU 3020 — Painel da operação</title>
+    <title>Revollution — Painel Operacional</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/estilo.css" />
   </head>
   <body>
     <header class="topo">
       <div class="topo-titulo">
-        <h1>GRU 3020</h1>
-        <span class="subtitulo">trâmite prioritário de marcas</span>
+        <img
+          class="topo-logo"
+          src="/assets/revollution-logo-full.png"
+          alt="Revollution — Marcas e Patentes"
+        />
+        <h1>Painel operacional · GRU 3020</h1>
       </div>
       <div class="status-operacao">
         <span id="status-processo" class="badge badge--neutro">processo: parado</span>
@@ -38,7 +48,23 @@
           <code>numero_processo</code> já gravado.
         </p>
         <form id="form-importar" class="linha-form">
-          <input id="campo-planilha" type="file" accept=".csv,.xlsx" required />
+          <label for="campo-planilha" class="campo-arquivo">
+            <input id="campo-planilha" type="file" accept=".csv,.xlsx" required />
+            <span class="campo-arquivo-icone" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5M5 15.5V19a1 1 0 001 1h12a1 1 0 001-1v-3.5"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+            <span class="campo-arquivo-texto" id="campo-arquivo-texto"
+              >Clique para escolher a planilha <em>(.csv, .xlsx)</em></span
+            >
+          </label>
           <button id="btn-importar" class="botao botao--primario" type="submit">Importar</button>
         </form>
         <div id="resultado-importar" class="resultado-importar"></div>
@@ -51,34 +77,54 @@
           valores moderados e escale se não houver sinal de bloqueio — ver runbook.
         </p>
         <form id="form-iniciar" class="grade-form">
-          <label>
+          <label class="campo-solo">
             Workers
             <input id="campo-max-workers" type="number" min="1" max="20" step="1" />
           </label>
-          <label>
-            Pausa entre ações — mín (ms)
-            <input id="campo-pausa-min" type="number" min="0" step="100" />
-          </label>
-          <label>
-            Pausa entre ações — máx (ms)
-            <input id="campo-pausa-max" type="number" min="0" step="100" />
-          </label>
-          <label>
-            Largada entre workers — mín (ms)
-            <input id="campo-largada-min" type="number" min="0" step="500" />
-          </label>
-          <label>
-            Largada entre workers — máx (ms)
-            <input id="campo-largada-max" type="number" min="0" step="500" />
-          </label>
-          <label>
-            Polling do verificador — mín (ms)
-            <input id="campo-verificador-min" type="number" min="0" step="1000" />
-          </label>
-          <label>
-            Polling do verificador — máx (ms)
-            <input id="campo-verificador-max" type="number" min="0" step="1000" />
-          </label>
+
+          <div class="campo-grupo">
+            <span class="campo-grupo-titulo">Pausa entre ações (ms)</span>
+            <div class="campo-grupo-linha">
+              <label><span>mín</span><input id="campo-pausa-min" type="number" min="0" step="100" /></label>
+              <label><span>máx</span><input id="campo-pausa-max" type="number" min="0" step="100" /></label>
+            </div>
+          </div>
+
+          <div class="campo-grupo">
+            <span class="campo-grupo-titulo">Largada entre workers (ms)</span>
+            <div class="campo-grupo-linha">
+              <label
+                ><span>mín</span><input id="campo-largada-min" type="number" min="0" step="500"
+              /></label>
+              <label
+                ><span>máx</span><input id="campo-largada-max" type="number" min="0" step="500"
+              /></label>
+            </div>
+          </div>
+
+          <div class="campo-grupo">
+            <span class="campo-grupo-titulo">Polling do verificador (ms)</span>
+            <div class="campo-grupo-linha">
+              <label
+                ><span>mín</span><input
+                  id="campo-verificador-min"
+                  type="number"
+                  min="0"
+                  step="1000"
+              /></label>
+              <label
+                ><span>máx</span><input
+                  id="campo-verificador-max"
+                  type="number"
+                  min="0"
+                  step="1000"
+              /></label>
+            </div>
+          </div>
+
+          <p id="aviso-sem-planilha" class="aviso-sem-planilha oculto">
+            Importe uma planilha válida (passo 1) antes de iniciar a operação.
+          </p>
           <div class="acoes-iniciar">
             <button id="btn-iniciar" class="botao botao--primario" type="submit">
               Iniciar operação
@@ -127,12 +173,13 @@
             <th>Tent.</th>
             <th>Nosso número</th>
             <th>Valor</th>
+            <th>Guia</th>
             <th>Erro</th>
           </tr>
         </thead>
         <tbody id="corpo-tabela">
           <tr>
-            <td colspan="10" class="linha-vazia">carregando…</td>
+            <td colspan="11" class="linha-vazia">carregando…</td>
           </tr>
         </tbody>
       </table>

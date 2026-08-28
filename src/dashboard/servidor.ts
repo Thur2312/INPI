@@ -9,9 +9,15 @@ import express, { type Express } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import { limparAlertaCategoria, obterOperacao, retomarOperacao } from '../db/operacao.js';
-import { contarPorStatus, listarTodosProcessos } from '../db/processos.js';
+import {
+  buscarProcessoPorId,
+  contarPorStatus,
+  existemProcessosPendentes,
+  listarTodosProcessos,
+} from '../db/processos.js';
 import { gerarCsvString, gerarWorkbook } from '../reports/relatorio.js';
 import { criarMiddlewareBasicAuth } from '../utils/basicAuth.js';
+import { enviarPdf } from '../utils/enviarPdf.js';
 import type { Logger } from '../utils/logger.js';
 import { importarPlanilhaParaBanco } from '../validation/importarParaBanco.js';
 import type { GerenciadorOperacao } from './gerenciadorOperacao.js';
@@ -43,6 +49,8 @@ export interface CriarAppOpcoes {
    * código para não quebrar os testes.
    */
   senha?: string;
+  /** Raiz do projeto, para resolver `caminhoPdf` (guardado relativo no banco) num caminho real de arquivo. */
+  raizProjeto: string;
 }
 
 const overridesOperacaoSchema = z
@@ -124,6 +132,22 @@ export function criarApp(db: Database.Database, opcoes: CriarAppOpcoes): Express
     res.json(opcoes.configPadrao);
   });
 
+  app.get('/api/processos/:id/pdf', (req, res, next) => {
+    const id = Number(req.params['id']);
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ erro: 'id inválido' });
+      return;
+    }
+
+    const processo = buscarProcessoPorId(db, id);
+    if (!processo) {
+      res.status(404).json({ erro: 'requerimento não encontrado' });
+      return;
+    }
+
+    enviarPdf(processo.caminhoPdf, opcoes.raizProjeto, processo.numeroProcesso, res, next);
+  });
+
   app.get('/api/log', (_req, res) => {
     let linhas: string[] = [];
     try {
@@ -181,6 +205,19 @@ export function criarApp(db: Database.Database, opcoes: CriarAppOpcoes): Express
     const validacao = overridesOperacaoSchema.safeParse(req.body ?? {});
     if (!validacao.success) {
       res.status(400).json({ erro: validacao.error.issues.map((i) => i.message).join('; ') });
+      return;
+    }
+
+    // Sem isso, "Iniciar operação" sobe a automação de qualquer jeito e ela
+    // fica com a fila vazia sem avisar nada — o operador só percebe olhando
+    // o log. Bloquear aqui é a mesma checagem que `existemProcessosPendentes`
+    // já faz pro worker saber quando a fila esgotou de verdade (Etapa 3),
+    // reaproveitada como pré-condição pra nem deixar começar.
+    if (!existemProcessosPendentes(db)) {
+      res.status(409).json({
+        erro:
+          'nenhuma planilha válida importada ainda — importe uma planilha (passo 1) antes de iniciar a operação',
+      });
       return;
     }
 

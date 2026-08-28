@@ -1,5 +1,4 @@
-import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type Database from 'better-sqlite3';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
@@ -13,6 +12,7 @@ import {
 import { somenteDigitos, validarDocumento } from '../domain/validarDocumento.js';
 import type { Processo } from '../domain/types.js';
 import { criarMiddlewareBasicAuth } from '../utils/basicAuth.js';
+import { enviarPdf } from '../utils/enviarPdf.js';
 import { assinarToken, verificarToken } from './token.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -69,29 +69,6 @@ function autenticarCliente(segredoToken: string) {
     req.titularDocumento = resultado.documento;
     next();
   };
-}
-
-function enviarPdf(
-  caminhoPdf: string | null,
-  raizProjeto: string,
-  numeroProcesso: string,
-  res: Response,
-  next: NextFunction,
-): void {
-  if (!caminhoPdf) {
-    res.status(404).json({ erro: 'esse requerimento ainda não tem boleto emitido' });
-    return;
-  }
-
-  const caminhoAbsoluto = resolve(raizProjeto, caminhoPdf);
-  if (!existsSync(caminhoAbsoluto)) {
-    res.status(404).json({ erro: 'arquivo do boleto não foi encontrado no servidor' });
-    return;
-  }
-
-  res.download(caminhoAbsoluto, `GRU-${numeroProcesso}.pdf`, (erro) => {
-    if (erro) next(erro);
-  });
 }
 
 /**
