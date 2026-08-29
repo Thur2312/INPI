@@ -5,6 +5,7 @@ const elBadge = document.getElementById('status-badge');
 const elBadgeProcesso = document.getElementById('status-processo');
 const elMotivo = document.getElementById('status-motivo');
 const elBtnRetomar = document.getElementById('btn-retomar');
+const elBtnSair = document.getElementById('btn-sair');
 const elAlertaCategoria = document.getElementById('alerta-categoria');
 const elAlertaCategoriaTexto = document.getElementById('alerta-categoria-texto');
 const elBtnDescartarAlerta = document.getElementById('btn-descartar-alerta');
@@ -202,6 +203,11 @@ function renderizarTabela(processos) {
 
 async function buscarStatus() {
   const resposta = await fetch('/api/status');
+  if (resposta.status === 401) {
+    window.location.href = '/login.html';
+    // a navegação não é síncrona — lança mesmo assim pra `atualizar()` não seguir tentando renderizar com dado nenhum.
+    throw new Error('sessão expirada');
+  }
   if (!resposta.ok) throw new Error(`status ${resposta.status}`);
   return resposta.json();
 }
@@ -230,6 +236,15 @@ elFiltroTexto.addEventListener('input', () => {
 });
 elFiltroStatus.addEventListener('change', () => {
   if (ultimoStatusPayload) renderizarTabela(ultimoStatusPayload.processos);
+});
+
+elBtnSair.addEventListener('click', async () => {
+  elBtnSair.disabled = true;
+  try {
+    await fetch('/api/logout', { method: 'POST' });
+  } finally {
+    window.location.href = '/login.html';
+  }
 });
 
 elBtnRetomar.addEventListener('click', async () => {

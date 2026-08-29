@@ -8,7 +8,7 @@ import { abrirConexao } from '../../src/db/connection.js';
 import { migrar } from '../../src/db/migrate.js';
 import type { CriarAppPortalOpcoes } from '../../src/portalCliente/servidor.js';
 import { criarAppPortalCliente } from '../../src/portalCliente/servidor.js';
-import { assinarToken } from '../../src/portalCliente/token.js';
+import { assinarToken } from '../../src/utils/token.js';
 
 const SEGREDO = 'segredo-de-teste-bem-comprido-1234567890';
 const DOCUMENTO_A = '11144477735'; // CPF com DV válido

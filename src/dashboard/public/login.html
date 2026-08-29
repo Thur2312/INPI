@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Revollution — Painel Operacional</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/estilo.css" />
+  </head>
+  <body>
+    <main class="tela-login-painel">
+      <img
+        class="logo-login"
+        src="/assets/revollution-logo-full.png"
+        alt="Revollution — Marcas e Patentes"
+      />
+      <form id="form-login" class="cartao-login">
+        <span class="rotulo-eyebrow">Painel operacional</span>
+        <h1>Entrar</h1>
+        <p class="ajuda">Acesso restrito — só quem opera o GRU 3020.</p>
+
+        <label for="campo-senha">Senha</label>
+        <input id="campo-senha" type="password" autocomplete="current-password" required autofocus />
+
+        <button id="btn-entrar" class="botao botao--primario" type="submit">Entrar</button>
+        <div id="erro-login" class="erro-login oculto"></div>
+      </form>
+    </main>
+
+    <script src="/login.js"></script>
+  </body>
+</html>

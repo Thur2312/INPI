@@ -165,6 +165,18 @@ body > * {
   border-color: var(--acento);
 }
 
+.botao--fantasma {
+  background: transparent;
+  border-color: rgba(243, 234, 217, 0.28);
+  color: var(--creme);
+  padding: 7px 16px;
+}
+
+.botao--fantasma:hover {
+  border-color: var(--dourado);
+  color: var(--dourado-claro);
+}
+
 .botao--acao {
   background: var(--erro);
   border-color: var(--erro);
@@ -663,6 +675,97 @@ body > * {
 .pilula-status--neutro {
   background: var(--neutro-fundo);
   color: var(--tinta-suave);
+}
+
+.rotulo-eyebrow {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--dourado);
+}
+
+/* --- tela de login do painel (troca o popup nativo de Basic Auth) --- */
+
+.tela-login-painel {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  padding: 32px 20px;
+}
+
+.logo-login {
+  width: min(260px, 70vw);
+  height: auto;
+}
+
+.cartao-login {
+  width: 100%;
+  max-width: 360px;
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: 20px;
+  padding: 32px 28px;
+  box-shadow: 0 24px 48px -32px rgba(43, 10, 21, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cartao-login h1 {
+  margin: 6px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--tinta);
+}
+
+.cartao-login .ajuda {
+  margin: 8px 0 20px;
+}
+
+.cartao-login label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--tinta-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 6px;
+}
+
+.cartao-login input {
+  width: 100%;
+  border: 1px solid var(--linha);
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--tinta);
+  background: var(--fundo-secundario);
+  margin-bottom: 20px;
+}
+
+.cartao-login input:focus {
+  outline: 2px solid var(--dourado);
+  outline-offset: -1px;
+}
+
+.cartao-login .botao {
+  width: 100%;
+}
+
+.erro-login {
+  margin-top: 14px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  background: var(--erro-fundo);
+  color: var(--erro);
+  font-size: 12.5px;
+  font-weight: 500;
 }
 
 .rodape {

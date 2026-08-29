@@ -341,28 +341,56 @@ describe('GET /', () => {
   });
 });
 
-describe('autenticação (DASHBOARD_SENHA)', () => {
+describe('autenticação (DASHBOARD_SENHA) — sessão por cookie, não Basic Auth', () => {
   beforeEach(async () => {
     await new Promise<void>((resolve) => servidor.close(() => resolve()));
     await subirApp({ senha: 'segredo-forte' });
   });
 
-  it('sem credenciais: 401', async () => {
+  /** Extrai só `nome=valor` do Set-Cookie da resposta, pra reenviar como Cookie na próxima requisição. */
+  function cookieDaResposta(resposta: Response): string {
+    const bruto = resposta.headers.get('set-cookie');
+    if (!bruto) throw new Error('resposta não trouxe Set-Cookie');
+    return bruto.split(';')[0] as string;
+  }
+
+  it('sem sessão: 401', async () => {
     const resposta = await fetch(`${baseUrl}/api/status`);
     expect(resposta.status).toBe(401);
   });
 
-  it('com senha errada: 401', async () => {
-    const resposta = await fetch(`${baseUrl}/api/status`, {
-      headers: { Authorization: `Basic ${Buffer.from('op:senha-errada').toString('base64')}` },
+  it('POST /api/login com senha errada: 401, sem cookie', async () => {
+    const resposta = await fetch(`${baseUrl}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senha: 'senha-errada' }),
     });
     expect(resposta.status).toBe(401);
+    expect(resposta.headers.get('set-cookie')).toBeNull();
   });
 
-  it('com a senha certa: 200 (usuário é ignorado)', async () => {
-    const resposta = await fetch(`${baseUrl}/api/status`, {
-      headers: { Authorization: `Basic ${Buffer.from('qualquer:segredo-forte').toString('base64')}` },
+  it('POST /api/login com a senha certa: 200, emite cookie que autentica as próximas chamadas', async () => {
+    const login = await fetch(`${baseUrl}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senha: 'segredo-forte' }),
     });
+    expect(login.status).toBe(200);
+    const cookie = cookieDaResposta(login);
+
+    const status = await fetch(`${baseUrl}/api/status`, { headers: { Cookie: cookie } });
+    expect(status.status).toBe(200);
+  });
+
+  it('POST /api/logout instrui o navegador a apagar o cookie (Max-Age=0)', async () => {
+    // O token é autocontido (HMAC + validade, sem estado no servidor —
+    // mesmo desenho do portal do cliente) — logout não "revoga" o token
+    // em si, só limpa o cookie do navegador. Reenviar o valor antigo à
+    // mão continuaria funcionando até a validade expirar; não é uma
+    // sessão com revogação de verdade, é aceito pelo mesmo motivo que já
+    // é aceito lá.
+    const resposta = await fetch(`${baseUrl}/api/logout`, { method: 'POST' });
     expect(resposta.status).toBe(200);
+    expect(resposta.headers.get('set-cookie')).toContain('Max-Age=0');
   });
 });

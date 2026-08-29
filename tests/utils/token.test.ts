@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { assinarToken, verificarToken } from '../../src/portalCliente/token.js';
+import { assinarToken, verificarToken } from '../../src/utils/token.js';
 
 const SEGREDO = 'segredo-de-teste-bem-comprido-1234567890';
 
 describe('assinarToken / verificarToken', () => {
-  it('emite um token que verifica de volta para o mesmo documento', () => {
+  it('emite um token que verifica de volta para o mesmo assunto', () => {
     const token = assinarToken('11144477735', SEGREDO, 60_000);
     const resultado = verificarToken(token, SEGREDO);
-    expect(resultado).toEqual({ documento: '11144477735' });
+    expect(resultado).toEqual({ assunto: '11144477735' });
   });
 
   it('rejeita token expirado', () => {
@@ -20,7 +20,7 @@ describe('assinarToken / verificarToken', () => {
     expect(verificarToken(token, 'outro-segredo-diferente-qualquer')).toBeNull();
   });
 
-  it('rejeita token adulterado (documento trocado depois de assinado)', () => {
+  it('rejeita token adulterado (assunto trocado depois de assinado)', () => {
     const token = assinarToken('11144477735', SEGREDO, 60_000);
     const decodificado = Buffer.from(token, 'base64url').toString('utf-8');
     const [, validoAte, assinatura] = decodificado.split('.');

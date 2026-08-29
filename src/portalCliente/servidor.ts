@@ -13,7 +13,7 @@ import { somenteDigitos, validarDocumento } from '../domain/validarDocumento.js'
 import type { Processo } from '../domain/types.js';
 import { criarMiddlewareBasicAuth } from '../utils/basicAuth.js';
 import { enviarPdf } from '../utils/enviarPdf.js';
-import { assinarToken, verificarToken } from './token.js';
+import { assinarToken, verificarToken } from '../utils/token.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -66,7 +66,7 @@ function autenticarCliente(segredoToken: string) {
       return;
     }
 
-    req.titularDocumento = resultado.documento;
+    req.titularDocumento = resultado.assunto;
     next();
   };
 }
