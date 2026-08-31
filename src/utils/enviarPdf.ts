@@ -2,6 +2,17 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { NextFunction, Response } from 'express';
 
+/** Nome amigável pro cliente reconhecer o arquivo — o nome do titular, não o número de processo (que só faz sentido pra quem opera). */
+function nomeArquivoGru(titularNome: string | null, numeroProcesso: string): string {
+  const base = titularNome?.trim() || numeroProcesso;
+  const slug = base
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return `GRU_${slug || numeroProcesso}.pdf`;
+}
+
 /**
  * Serve o PDF de uma guia já emitida, resolvendo o caminho relativo salvo
  * no banco (`caminhoPdf`) contra a raiz do projeto. Compartilhado pelo
@@ -12,6 +23,7 @@ import type { NextFunction, Response } from 'express';
 export function enviarPdf(
   caminhoPdf: string | null,
   raizProjeto: string,
+  titularNome: string | null,
   numeroProcesso: string,
   res: Response,
   next: NextFunction,
@@ -27,7 +39,7 @@ export function enviarPdf(
     return;
   }
 
-  res.download(caminhoAbsoluto, `GRU-${numeroProcesso}.pdf`, (erro) => {
+  res.download(caminhoAbsoluto, nomeArquivoGru(titularNome, numeroProcesso), (erro) => {
     if (erro) next(erro);
   });
 }

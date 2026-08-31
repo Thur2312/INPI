@@ -3,9 +3,14 @@ dist/
 data/
 output/
 .env
+.env.*
 *.log
 
 # Planilhas de teste com CPF/CNPJ real de cliente — nunca versionar.
 docs/*.xlsx
+*.xlsx
+
+# Credenciais/acesso de VPS — sempre local, nunca versionar.
+VPS_ACCESS.local.md
 
 .commit-message.txt

@@ -130,7 +130,7 @@ export function criarAppPortalCliente(db: Database.Database, opcoes: CriarAppPor
       return;
     }
 
-    enviarPdf(processo.caminhoPdf, raizProjeto, processo.numeroProcesso, res, next);
+    enviarPdf(processo.caminhoPdf, raizProjeto, processo.titularNome, processo.numeroProcesso, res, next);
   });
 
   const autenticarAdmin = criarMiddlewareBasicAuth(senhaAdmin, 'Portal Cliente - Admin');
@@ -152,7 +152,7 @@ export function criarAppPortalCliente(db: Database.Database, opcoes: CriarAppPor
       return;
     }
 
-    enviarPdf(processo.caminhoPdf, raizProjeto, processo.numeroProcesso, res, next);
+    enviarPdf(processo.caminhoPdf, raizProjeto, processo.titularNome, processo.numeroProcesso, res, next);
   });
 
   app.use(express.static(join(__dirname, 'public')));

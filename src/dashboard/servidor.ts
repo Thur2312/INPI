@@ -237,7 +237,7 @@ export function criarApp(db: Database.Database, opcoes: CriarAppOpcoes): Express
       return;
     }
 
-    enviarPdf(processo.caminhoPdf, opcoes.raizProjeto, processo.numeroProcesso, res, next);
+    enviarPdf(processo.caminhoPdf, opcoes.raizProjeto, processo.titularNome, processo.numeroProcesso, res, next);
   });
 
   app.get('/api/log', (_req, res) => {

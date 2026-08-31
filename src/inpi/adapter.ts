@@ -256,13 +256,13 @@ export class AdapterInpi {
     const valorConferido = await this.conferirValor(dados.valorEsperado);
 
     if (opcoes.dryRun) {
-      await this.page.click(CONFERENCIA.cancelar);
+      await this.page.click(`${CONFERENCIA.cancelar}:visible`);
       return { modo: 'dry-run', valorConferido, objetoPeticaoValue };
     }
 
     await opcoes.antesDeConfirmar?.();
 
-    await this.page.click(CONFERENCIA.gerarBoleto);
+    await this.page.click(`${CONFERENCIA.gerarBoleto}:visible`);
     // Mesma corrida do login: este clique navega para a tela finalizada.
     await this.page.waitForLoadState('load');
     await this.verificarCaptcha();
@@ -530,13 +530,40 @@ export class AdapterInpi {
     await pausaAleatoria(PAUSA_ENTRE_PASSOS_FORMULARIO_MIN_MS, PAUSA_ENTRE_PASSOS_FORMULARIO_MAX_MS);
   }
 
+  /**
+   * O campo de valor às vezes fica vazio por um tempo depois do
+   * `networkidle` da tela de conferência — o cálculo do valor parece
+   * chegar por uma chamada assíncrona separada da que monta o resto da
+   * tela. Espera o texto deixar de ser vazio antes de ler pra valer, em
+   * vez de confiar só no `networkidle` (ver `docs/runbook-vps.md`,
+   * instabilidades conhecidas do lado do INPI).
+   */
+  private async aguardarValorPreenchido(): Promise<string> {
+    const MAX_TENTATIVAS = 40;
+    const INTERVALO_MS = 500;
+    const locator = this.page.locator(CONFERENCIA.valorTotal);
+
+    for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa += 1) {
+      const texto = (await locator.innerText()).trim();
+      if (texto !== '') {
+        return texto;
+      }
+      await this.page.waitForTimeout(INTERVALO_MS);
+    }
+
+    return (await locator.innerText()).trim();
+  }
+
   private async conferirValor(valorEsperado: number): Promise<string> {
-    const valorTexto = (await this.page.locator(CONFERENCIA.valorTotal).innerText()).trim();
+    const valorTexto = await this.aguardarValorPreenchido();
     const valorNumerico = parseValorBr(valorTexto);
 
     if (valorNumerico === null || Math.abs(valorNumerico - valorEsperado) > 0.001) {
-      await this.page.click(CONFERENCIA.cancelar);
-      throw new ValorInesperadoError(valorEsperado, valorNumerico ?? Number.NaN);
+      await this.capturarScreenshot(
+        `output/diagnostico/valor-inesperado-${Date.now()}.png`,
+      ).catch(() => null);
+      await this.page.click(`${CONFERENCIA.cancelar}:visible`);
+      throw new ValorInesperadoError(valorEsperado, valorNumerico ?? Number.NaN, valorTexto);
     }
 
     return valorTexto;
