@@ -90,7 +90,6 @@ describe('executarDryRun', () => {
       db,
       adapter,
       credenciais,
-      valorEsperadoGru: 445,
       limite: 3,
       logger: criarLoggerFalso(),
       pausaEntreAcoesMinMs: 1,
@@ -125,7 +124,6 @@ describe('executarDryRun', () => {
       db,
       adapter,
       credenciais,
-      valorEsperadoGru: 445,
       limite: 5,
       logger,
       pausaEntreAcoesMinMs: 1,
@@ -154,7 +152,6 @@ describe('executarDryRun', () => {
       db,
       adapter,
       credenciais,
-      valorEsperadoGru: 445,
       limite: 1,
       logger,
       pausaEntreAcoesMinMs: 1,
@@ -176,7 +173,6 @@ describe('executarDryRun', () => {
       db,
       adapter,
       credenciais,
-      valorEsperadoGru: 445,
       limite: 3,
       logger: criarLoggerFalso(),
     });
@@ -187,7 +183,7 @@ describe('executarDryRun', () => {
 
   it('ignora processos já emitidos/em erro — só considera VALIDADO e AGUARDANDO_ABERTURA', async () => {
     inserirProcesso({ posicao: 1, status: 'GRU_EMITIDA' });
-    inserirProcesso({ posicao: 2, status: 'ERRO_VALOR_INESPERADO' });
+    inserirProcesso({ posicao: 2, status: 'ERRO_TIMEOUT' });
     inserirProcesso({ posicao: 3, status: 'VALIDADO', numeroProcesso: '900000003' });
 
     const numerosVistos: string[] = [];
@@ -200,7 +196,6 @@ describe('executarDryRun', () => {
       db,
       adapter,
       credenciais,
-      valorEsperadoGru: 445,
       limite: 10,
       logger: criarLoggerFalso(),
       pausaEntreAcoesMinMs: 1,

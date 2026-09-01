@@ -12,7 +12,6 @@ import {
   ClienteNaoEncontradoError,
   ObjetoPeticaoIndisponivelError,
   SessaoInpiError,
-  ValorInesperadoError,
 } from '../../src/inpi/erros.js';
 import { BASE, CLIENTE, ROTAS } from '../../src/inpi/selectors.js';
 
@@ -98,7 +97,6 @@ const dadosEmissaoPadrao = {
   titularDocumento: '111.444.777-35',
   numeroProcesso: '940328100',
   objetoPeticaoTexto: 'TPH',
-  valorEsperado: 445,
 };
 
 let browser: Browser;
@@ -221,17 +219,27 @@ describe('emitirGru — os três detalhes do fluxo real', () => {
     ]);
   });
 
-  it('lança ValorInesperadoError e cancela o serviço (nunca clica em Gerar boleto) quando o valor não bate', async () => {
+  it('não bloqueia a emissão quando o valor da guia diverge do configurado — chega até a tela de download', async () => {
     const { adapter, context, cenario } = await criarAdapter({ valorGru: '999,00' });
     await adapter.login(cenario.usuarioValido, cenario.senhaValida);
 
-    await expect(adapter.emitirGru(dadosEmissaoPadrao)).rejects.toThrow(ValorInesperadoError);
+    const resultado = await adapter.emitirGru(dadosEmissaoPadrao);
+
+    // 'emitida' só é retornado depois de clicar em Gerar boleto, navegar
+    // para a tela finalizada e ler nossoNumero/link de download de lá —
+    // ou seja, chegar aqui já prova que passou pela tela de download.
+    expect(resultado.modo).toBe('emitida');
+    if (resultado.modo !== 'emitida') throw new Error('esperava modo emitida');
+    expect(resultado.valorGru).toBe('999,00');
+    expect(resultado.nossoNumero).toBe(cenario.nossoNumero);
+    expect(resultado.linkBoleto).toBe(`${BASE}/gru/imprimir/codigo/ABC123XYZ`);
 
     const [page] = context.pages();
+    expect(page?.url()).toBe(ROTAS.finalizada);
     const cancelado = await page?.evaluate(
       () => (globalThis as Record<string, unknown>)['__CANCELADO__'],
     );
-    expect(cancelado).toBe(true);
+    expect(cancelado).toBeUndefined();
   });
 });
 

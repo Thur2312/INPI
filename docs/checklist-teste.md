@@ -32,7 +32,6 @@ Rodar pelo terminal em modo ensaio primeiro é o caminho mais seguro antes de us
 ## 4. Decisões que só o time sabe
 
 - [ ] A cota do INPI está aberta agora, ou o teste vai ser fora da janela? Fora da janela dá para testar login/busca/planilha, mas não a emissão completa (fica em `AGUARDANDO_ABERTURA`).
-- [ ] `VALOR_ESPERADO_GRU` no `.env` (padrão `445.00`) está com o valor vigente da GRU 3020? Se estiver desatualizado, o sistema barra com `ERRO_VALOR_INESPERADO` (seguro, mas trava o teste).
 
 ## 5. Roteiro sugerido
 

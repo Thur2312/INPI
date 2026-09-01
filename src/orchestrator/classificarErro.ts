@@ -3,7 +3,6 @@ import {
   ClienteAmbiguoError,
   ClienteNaoEncontradoError,
   ObjetoPeticaoIndisponivelError,
-  ValorInesperadoError,
 } from '../inpi/erros.js';
 
 export type Classificacao = 'PAUSA_GLOBAL' | 'RETRY' | 'DEFINITIVO';
@@ -14,9 +13,9 @@ export type Classificacao = 'PAUSA_GLOBAL' | 'RETRY' | 'DEFINITIVO';
  * - `PAUSA_GLOBAL`: o problema é da operação inteira, não do processo que
  *   estava sendo tentado (cota fechou, captcha apareceu). Pausa a fila
  *   inteira e devolve o processo — ele não tem culpa de nada.
- * - `DEFINITIVO`: o dado está errado (cliente não existe, valor não bate).
- *   Retentar não muda o resultado — vai pro status de erro na hora,
- *   independente de quantas tentativas sobraram.
+ * - `DEFINITIVO`: o dado está errado (cliente não existe, documento
+ *   ambíguo). Retentar não muda o resultado — vai pro status de erro na
+ *   hora, independente de quantas tentativas sobraram.
  * - `RETRY`: pode ser transitório (sessão caiu, timeout, erro
  *   desconhecido). Tenta de novo com backoff, respeitando o teto de
  *   tentativas do processo — nunca loop infinito.
@@ -30,11 +29,7 @@ export function classificarErro(erro: unknown): Classificacao {
   if (erro instanceof ObjetoPeticaoIndisponivelError || erro instanceof CaptchaDetectadoError) {
     return 'PAUSA_GLOBAL';
   }
-  if (
-    erro instanceof ClienteNaoEncontradoError ||
-    erro instanceof ClienteAmbiguoError ||
-    erro instanceof ValorInesperadoError
-  ) {
+  if (erro instanceof ClienteNaoEncontradoError || erro instanceof ClienteAmbiguoError) {
     return 'DEFINITIVO';
   }
   return 'RETRY';

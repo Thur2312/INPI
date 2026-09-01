@@ -7,7 +7,6 @@ import {
   ObjetoPeticaoIndisponivelError,
   SessaoInpiError,
   TimeoutInpiError,
-  ValorInesperadoError,
 } from '../../src/inpi/erros.js';
 import {
   classificarErro,
@@ -21,10 +20,9 @@ describe('classificarErro', () => {
     expect(classificarErro(new CaptchaDetectadoError('iframe'))).toBe('PAUSA_GLOBAL');
   });
 
-  it('cliente não encontrado, ambíguo e valor inesperado são DEFINITIVO — retry não muda o dado', () => {
+  it('cliente não encontrado e ambíguo são DEFINITIVO — retry não muda o dado', () => {
     expect(classificarErro(new ClienteNaoEncontradoError('doc'))).toBe('DEFINITIVO');
     expect(classificarErro(new ClienteAmbiguoError('doc', 2))).toBe('DEFINITIVO');
-    expect(classificarErro(new ValorInesperadoError(445, 500))).toBe('DEFINITIVO');
   });
 
   it('sessão caída, timeout e erros desconhecidos são RETRY', () => {

@@ -60,21 +60,6 @@ export class ObjetoPeticaoIndisponivelError extends ErroInpi {
   }
 }
 
-export class ValorInesperadoError extends ErroInpi {
-  readonly tipo = 'ERRO_VALOR_INESPERADO';
-  constructor(
-    readonly valorEsperado: number,
-    readonly valorEncontrado: number,
-    readonly valorTexto?: string,
-  ) {
-    super(
-      `valor da guia (R$ ${valorEncontrado.toFixed(2)}) diferente do esperado (R$ ${valorEsperado.toFixed(2)}) — serviço cancelado antes de gerar o boleto` +
-        (valorTexto !== undefined ? ` — texto bruto lido da tela: "${valorTexto}"` : ''),
-    );
-    this.name = 'ValorInesperadoError';
-  }
-}
-
 export class SessaoInpiError extends ErroInpi {
   readonly tipo = 'ERRO_SESSAO';
   constructor(mensagem: string) {

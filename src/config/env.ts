@@ -46,7 +46,6 @@ const envSchema = z
     DB_PATH: z.string().default('./data/inpi.db'),
 
     MAX_WORKERS: z.coerce.number().int().min(1).max(20).default(4),
-    VALOR_ESPERADO_GRU: z.coerce.number().positive().default(445.0),
     HORA_ABERTURA_COTA: horaSchema.default('10:00'),
     HORA_LIMITE_EMISSAO: horaSchema.default('22:00'),
     HARD_STOP_22H: z

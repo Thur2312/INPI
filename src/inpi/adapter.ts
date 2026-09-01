@@ -15,7 +15,6 @@ import {
   ObjetoPeticaoIndisponivelError,
   PeriodoConsultaInvalidoError,
   SessaoInpiError,
-  ValorInesperadoError,
 } from './erros.js';
 import { pausaAleatoria } from '../utils/sleep.js';
 import {
@@ -42,8 +41,6 @@ export interface DadosEmissaoGru {
    * no ar; ver `ObjetoPeticaoIndisponivelError`).
    */
   objetoPeticaoTexto: string;
-  /** Valor esperado da guia, em reais (ex.: 445.00), conferido antes da ação irreversível. */
-  valorEsperado: number;
 }
 
 export type ResultadoEmissaoGru =
@@ -216,10 +213,12 @@ export class AdapterInpi {
   }
 
   /**
-   * Percorre o fluxo completo de emissão. Se `dados.valorEsperado` não
-   * bater com o valor lido na tela de conferência, cancela o serviço e
-   * lança `ValorInesperadoError` — nunca clica em "Gerar boleto" com um
-   * valor não conferido.
+   * Percorre o fluxo completo de emissão. Não bloqueia por causa do valor
+   * mostrado na tela de conferência — só lê para auditoria/relatório (ver
+   * `lerValorGuia`). A identificação correta do serviço já está garantida
+   * antes desta tela: `selecionarCliente` exige exatamente uma linha para
+   * o documento buscado, e `numeroProcesso` é digitado por nós mesmos no
+   * formulário, não escolhido de uma lista ambígua.
    *
    * Em modo ensaio, para exatamente antes do clique em "Gerar boleto"
    * (nenhuma guia é gerada) e retorna o valor lido para auditoria.
@@ -253,7 +252,7 @@ export class AdapterInpi {
     await this.page.waitForLoadState('networkidle');
     await this.verificarCaptcha();
 
-    const valorConferido = await this.conferirValor(dados.valorEsperado);
+    const valorConferido = await this.lerValorGuia();
 
     if (opcoes.dryRun) {
       await this.page.click(`${CONFERENCIA.cancelar}:visible`);
@@ -554,19 +553,18 @@ export class AdapterInpi {
     return (await locator.innerText()).trim();
   }
 
-  private async conferirValor(valorEsperado: number): Promise<string> {
-    const valorTexto = await this.aguardarValorPreenchido();
-    const valorNumerico = parseValorBr(valorTexto);
-
-    if (valorNumerico === null || Math.abs(valorNumerico - valorEsperado) > 0.001) {
-      await this.capturarScreenshot(
-        `output/diagnostico/valor-inesperado-${Date.now()}.png`,
-      ).catch(() => null);
-      await this.page.click(`${CONFERENCIA.cancelar}:visible`);
-      throw new ValorInesperadoError(valorEsperado, valorNumerico ?? Number.NaN, valorTexto);
-    }
-
-    return valorTexto;
+  /**
+   * Só lê o valor mostrado na tela de conferência, para auditoria/relatório
+   * — nunca bloqueia a emissão por ele. O INPI pode reajustar a taxa da
+   * GRU sem aviso prévio; travar a operação inteira numa divergência de
+   * preço faria mais mal do que bem no dia da cota. A identificação do
+   * cliente/processo já é garantida antes desta tela (documento com
+   * exatamente uma linha em `selecionarCliente`, numero_processo digitado
+   * por nós mesmos em `SERVICO.processo`) — é nisso que confiamos, não no
+   * valor.
+   */
+  private async lerValorGuia(): Promise<string> {
+    return this.aguardarValorPreenchido();
   }
 
   private async lerResultadoFinalizada(
@@ -663,12 +661,4 @@ function formatarDataBr(data: Date): string {
 
 function escapeRegExp(valor: string): string {
   return valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/** "445,00" -> 445.00. Retorna null se não conseguir interpretar o texto lido. */
-function parseValorBr(texto: string): number | null {
-  const limpo = texto.replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3},)/g, '');
-  const normalizado = limpo.replace(',', '.');
-  const valor = Number.parseFloat(normalizado);
-  return Number.isFinite(valor) ? valor : null;
 }

@@ -33,7 +33,6 @@ async function main(): Promise<void> {
       db,
       adapter,
       credenciais: { usuario: env.INPI_USUARIO, senha: env.INPI_SENHA },
-      valorEsperadoGru: env.VALOR_ESPERADO_GRU,
       limite: argumentos.limite,
       logger,
     });
@@ -59,7 +58,6 @@ async function main(): Promise<void> {
 
   const config: ConfigWorker = {
     maxTentativas: env.MAX_TENTATIVAS,
-    valorEsperadoGru: env.VALOR_ESPERADO_GRU,
     pastaGuias: join(env.OUTPUT_DIR, 'guias'),
     pastaErros: join(env.OUTPUT_DIR, 'erros'),
     horaLimiteEmissao: env.HORA_LIMITE_EMISSAO,

@@ -35,7 +35,6 @@ export const STATUS_EXCECAO = [
   'ERRO_CLIENTE_NAO_ENCONTRADO',
   'ERRO_CLIENTE_AMBIGUO',
   'ERRO_OBJETO_INDISPONIVEL',
-  'ERRO_VALOR_INESPERADO',
   'ERRO_TIMEOUT',
   'ERRO_SESSAO',
   'ERRO_CAPTCHA',
@@ -50,7 +49,6 @@ export type Status = (typeof STATUS)[number];
 export const STATUS_ERRO_DEFINITIVO = [
   'ERRO_CLIENTE_NAO_ENCONTRADO',
   'ERRO_CLIENTE_AMBIGUO',
-  'ERRO_VALOR_INESPERADO',
 ] as const;
 
 /** Erros temporários: retry com backoff pode resolver (sessão caiu, timeout de rede). */

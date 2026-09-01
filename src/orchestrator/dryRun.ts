@@ -19,7 +19,6 @@ export interface OpcoesDryRun {
   db: Database.Database;
   adapter: DryRunAdapter;
   credenciais: CredenciaisInpi;
-  valorEsperadoGru: number;
   limite: number;
   logger: Logger;
   pausaEntreAcoesMinMs?: number;
@@ -45,7 +44,6 @@ export async function executarDryRun(opcoes: OpcoesDryRun): Promise<void> {
     db,
     adapter,
     credenciais,
-    valorEsperadoGru,
     limite,
     logger,
     pausaEntreAcoesMinMs = PAUSA_ENTRE_ACOES_MIN_MS,
@@ -78,7 +76,6 @@ export async function executarDryRun(opcoes: OpcoesDryRun): Promise<void> {
           titularDocumento: processo.titularDocumento,
           numeroProcesso: processo.numeroProcesso,
           objetoPeticaoTexto: processo.objetoPeticao,
-          valorEsperado: valorEsperadoGru,
         },
         { dryRun: true },
       );

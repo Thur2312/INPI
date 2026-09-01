@@ -57,7 +57,6 @@ function criarLoggerFalso(): Logger {
 
 const configPadrao: ConfigWorker = {
   maxTentativas: 3,
-  valorEsperadoGru: 445,
   pastaGuias: '',
   pastaErros: '',
   horaLimiteEmissao: '22:00',

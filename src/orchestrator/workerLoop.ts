@@ -47,7 +47,6 @@ export interface CredenciaisInpi {
 
 export interface ConfigWorker {
   maxTentativas: number;
-  valorEsperadoGru: number;
   pastaGuias: string;
   pastaErros: string;
   horaLimiteEmissao: string;
@@ -166,7 +165,6 @@ async function processarUmItem(deps: DependenciasWorker, processo: Processo): Pr
       titularDocumento: processo.titularDocumento,
       numeroProcesso: processo.numeroProcesso,
       objetoPeticaoTexto: processo.objetoPeticao,
-      valorEsperado: config.valorEsperadoGru,
     },
     {
       antesDeConfirmar: () => {

@@ -37,7 +37,7 @@ Rodando numa VPS Hostinger (Ubuntu 24.04, PM2 + systemd, firewall restrito, SSH 
 
 ### Painel interno / operação
 
-- [ ] Itens em aberto no `docs/checklist-teste.md`: confirmar `objeto_peticao` exato de cada categoria antes de rodar em massa, confirmar `VALOR_ESPERADO_GRU` vigente, decidir se a cota está mesmo aberta antes de cada rodada.
+- [ ] Itens em aberto no `docs/checklist-teste.md`: confirmar `objeto_peticao` exato de cada categoria antes de rodar em massa, decidir se a cota está mesmo aberta antes de cada rodada.
 - [ ] **Tailscale** ainda não configurado — o painel interno (porta 3000) não é exposto publicamente até lá; hoje só é alcançável por túnel SSH.
 - [ ] **Backup externo** (fora da VPS) do SQLite e do output nunca foi testado com restore de verdade.
 

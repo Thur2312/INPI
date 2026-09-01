@@ -28,7 +28,6 @@ const MAPA_STATUS = {
   ERRO_CLIENTE_NAO_ENCONTRADO: { rotulo: 'Titular não localizado no INPI', classe: 'erro' },
   ERRO_CLIENTE_AMBIGUO: { rotulo: 'Precisa de revisão manual', classe: 'erro' },
   ERRO_OBJETO_INDISPONIVEL: { rotulo: 'Categoria ainda não disponível', classe: 'alerta' },
-  ERRO_VALOR_INESPERADO: { rotulo: 'Valor da guia divergente', classe: 'erro' },
   ERRO_TIMEOUT: { rotulo: 'Nova tentativa em andamento', classe: 'alerta' },
   ERRO_SESSAO: { rotulo: 'Nova tentativa em andamento', classe: 'alerta' },
   ERRO_CAPTCHA: { rotulo: 'Verificação de segurança do INPI', classe: 'alerta' },

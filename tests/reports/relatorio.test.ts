@@ -57,7 +57,7 @@ describe('gerarCsvString', () => {
     marcarComoDefinitivo(
       db,
       id2,
-      'ERRO_VALOR_INESPERADO',
+      'ERRO_CLIENTE_AMBIGUO',
       'valor "errado", inesperado',
       null,
     );
