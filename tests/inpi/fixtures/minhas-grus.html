@@ -95,6 +95,18 @@
 
         var tbody = document.querySelector('table.table-striped tbody');
         tbody.innerHTML = '';
+
+        // O INPI real sempre inclui essa linha (colspan, só 1 <td>) mesmo
+        // quando existem resultados de verdade na mesma tabela — não é um
+        // placeholder que só aparece com zero resultados. Confirmado
+        // contra o sistema real em 01/09/2026.
+        var trVazio = document.createElement('tr');
+        var tdVazio = document.createElement('td');
+        tdVazio.setAttribute('colspan', '3');
+        tdVazio.textContent = 'Nenhum registro encontrado';
+        trVazio.appendChild(tdVazio);
+        tbody.appendChild(trVazio);
+
         (c.resultadoGrus || []).forEach(function (gru) {
           var tr = document.createElement('tr');
 

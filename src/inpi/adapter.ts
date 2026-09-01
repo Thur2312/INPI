@@ -25,6 +25,7 @@ import {
   FINALIZADA,
   LOGIN,
   MINHAS_GRUS,
+  MINHAS_GRUS_COLUNAS,
   MINHAS_GRUS_MAX_DIAS,
   ROTAS,
   SERVICO,
@@ -593,14 +594,25 @@ export class AdapterInpi {
   /**
    * Tabela sem id — extrai por posição de coluna (ver
    * `MINHAS_GRUS_COLUNAS` em `selectors.ts`), não por seletor de célula.
+   *
+   * A tela real sempre inclui uma linha "Nenhum registro encontrado" (só
+   * 1 `<td>`, com colspan) — e não é um placeholder que só existe quando
+   * a busca dá zero resultados, ela convive normalmente com linhas de
+   * resultado de verdade na mesma tabela. Sem o filtro abaixo, tentar ler
+   * a coluna 1+ dessa linha trava esperando uma célula que não existe
+   * (confirmado contra o sistema real em 01/09/2026 — foi o que travou a
+   * reconciliação de um processo em EMISSAO_INCERTA no meio da operação).
    */
   private async lerTabelaGrus(): Promise<GruEncontrada[]> {
+    const NUMERO_COLUNAS = Object.keys(MINHAS_GRUS_COLUNAS).length;
     const linhas = this.page.locator(`${MINHAS_GRUS.tabela} tbody tr`);
     const total = await linhas.count();
     const resultado: GruEncontrada[] = [];
 
     for (let i = 0; i < total; i += 1) {
       const celulas = linhas.nth(i).locator('td');
+      if ((await celulas.count()) < NUMERO_COLUNAS) continue;
+
       const linkSegundaVia = celulas.nth(4).locator(MINHAS_GRUS.segundaVia);
       const temLinkSegundaVia = (await linkSegundaVia.count()) > 0;
       const hrefSegundaVia = temLinkSegundaVia ? await linkSegundaVia.getAttribute('href') : null;
