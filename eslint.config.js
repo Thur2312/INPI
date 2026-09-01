@@ -2,6 +2,7 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
+import globals from 'globals';
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -19,14 +20,25 @@ export default tseslint.config(
     },
   },
   {
-    // Worker de teste em JS puro, roda fora do pipeline TS de propósito (ver comentário no arquivo).
-    files: ['**/*.mjs'],
+    // Scripts em JS puro (worker de teste, scripts/) rodam fora do
+    // pipeline TS de propósito — mas ainda são Node de verdade, então
+    // precisam dos globals do Node (URL, console, process...), que
+    // `disableTypeChecked` sozinho não dá (só desliga regras de tipo).
+    files: ['**/*.mjs', '**/*.cjs'],
     ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: globals.node,
+    },
   },
   {
     // Arquivo de configuração de tooling, fora do tsconfig do projeto.
     files: ['eslint.config.js'],
     ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: globals.node,
+    },
   },
   {
     // `expect(objetoFalso.metodo).toHaveBeenCalledWith(...)` é o padrão
