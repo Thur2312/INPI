@@ -40,14 +40,30 @@ describe('validarLinhas', () => {
     expect(resultado[0]?.erroMensagem).toMatch(/fora do formato/);
   });
 
-  it('marca ambas as ocorrências de numero_processo duplicado como PENDENCIA_DADOS', () => {
+  it('mantém a 1ª ocorrência de numero_processo duplicado como candidata e rejeita só as repetições', () => {
     const resultado = validarLinhas([
       linha({ posicao: 1, numero_processo: '940328100' }),
       linha({ posicao: 2, numero_processo: '940328100', titular_documento: '11222333000181' }),
     ]);
     expect(resultado).toHaveLength(2);
-    expect(resultado.every((r) => r.status === 'PENDENCIA_DADOS')).toBe(true);
-    expect(resultado.every((r) => r.erroMensagem?.includes('duplicado'))).toBe(true);
+
+    const primeira = resultado.find((r) => r.posicao === 1);
+    const segunda = resultado.find((r) => r.posicao === 2);
+    expect(primeira?.status).toBe('VALIDADO');
+    expect(primeira?.erroMensagem).toBeNull();
+    expect(segunda?.status).toBe('PENDENCIA_DADOS');
+    expect(segunda?.erroMensagem).toMatch(/duplicado na planilha.*linha 1/);
+  });
+
+  it('com 3+ ocorrências do mesmo numero_processo, mantém só a 1ª e rejeita as demais', () => {
+    const resultado = validarLinhas([
+      linha({ posicao: 1, numero_processo: '940328100' }),
+      linha({ posicao: 2, numero_processo: '940328100', titular_documento: '11222333000181' }),
+      linha({ posicao: 3, numero_processo: '940328100', titular_documento: '22333444000162' }),
+    ]);
+    expect(resultado.filter((r) => r.status === 'VALIDADO')).toHaveLength(1);
+    expect(resultado.find((r) => r.posicao === 1)?.status).toBe('VALIDADO');
+    expect(resultado.filter((r) => r.status === 'PENDENCIA_DADOS')).toHaveLength(2);
   });
 
   it('não considera linhas com PENDENCIA_DADOS ao calcular o teto por titular', () => {

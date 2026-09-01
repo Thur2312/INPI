@@ -23,11 +23,16 @@ export interface LinhaProcessada {
 /**
  * Orquestra a validação completa de uma planilha já importada:
  * 1. valida dígito verificador de CPF/CNPJ e formato do número de processo;
- * 2. rejeita duplicidade de numero_processo — tanto dentro do próprio lote
- *    quanto contra `numerosProcessoExistentes` (processos já gravados no
- *    banco por uma importação anterior; ver `importarPlanilhaParaBanco`) —
- *    ambiguidade que não decidimos sozinhos, isso é humano;
- * 3. aplica o teto de 10 requerimentos por titular sobre o que sobrou.
+ * 2. quando o mesmo numero_processo aparece mais de uma vez no lote, mantém
+ *    a 1ª ocorrência (ordem de aparição na planilha) como candidata normal e
+ *    rejeita só as repetições seguintes — a alternativa (rejeitar todas as
+ *    ocorrências) já causou um processo de cliente sumir da fila sem
+ *    ninguém notar, porque nenhuma das cópias chegava a virar erro isolado
+ *    o bastante pra ser óbvio no relatório;
+ * 3. rejeita também contra `numerosProcessoExistentes` (processos já
+ *    gravados no banco por uma importação anterior; ver
+ *    `importarPlanilhaParaBanco`);
+ * 4. aplica o teto de 10 requerimentos por titular sobre o que sobrou.
  *
  * Cada linha sai com um status final e, se não for VALIDADO, um motivo
  * legível — é o que alimenta o relatório de pendências.
@@ -39,20 +44,20 @@ export function validarLinhas(
   const pendentes: LinhaProcessada[] = [];
   const candidatos: (CandidatoProcesso & { titularDocumentoOriginal: string })[] = [];
 
-  const contagemPorNumeroProcesso = new Map<string, number>();
+  const posicaoDaPrimeiraOcorrencia = new Map<string, number>();
   for (const linha of linhas) {
     const { normalizado } = validarNumeroProcesso(linha.dados.numero_processo);
-    contagemPorNumeroProcesso.set(
-      normalizado,
-      (contagemPorNumeroProcesso.get(normalizado) ?? 0) + 1,
-    );
+    if (!posicaoDaPrimeiraOcorrencia.has(normalizado)) {
+      posicaoDaPrimeiraOcorrencia.set(normalizado, linha.posicao);
+    }
   }
 
   for (const linha of linhas) {
     const { dados, posicao } = linha;
     const docResultado = validarDocumento(dados.titular_documento);
     const numeroResultado = validarNumeroProcesso(dados.numero_processo);
-    const numeroDuplicado = (contagemPorNumeroProcesso.get(numeroResultado.normalizado) ?? 0) > 1;
+    const primeiraOcorrencia = posicaoDaPrimeiraOcorrencia.get(numeroResultado.normalizado);
+    const numeroDuplicado = primeiraOcorrencia !== undefined && primeiraOcorrencia !== posicao;
     const numeroJaNoBanco = numerosProcessoExistentes.has(numeroResultado.normalizado);
 
     const problemas: string[] = [];
@@ -65,7 +70,9 @@ export function validarLinhas(
       problemas.push(`numero_processo "${dados.numero_processo}" fora do formato esperado`);
     }
     if (numeroDuplicado) {
-      problemas.push(`numero_processo "${numeroResultado.normalizado}" duplicado na planilha`);
+      problemas.push(
+        `numero_processo "${numeroResultado.normalizado}" duplicado na planilha — mantida a 1ª ocorrência (linha ${primeiraOcorrencia})`,
+      );
     }
     if (numeroJaNoBanco) {
       problemas.push(
